@@ -1,7 +1,9 @@
 import { motion } from "framer-motion";
-import { Database, Globe } from "lucide-react";
+import { Database, Globe, Sparkles, LayoutDashboard } from "lucide-react";
+import { NavLink } from "./NavLink";
 
 const DashboardHeader = () => {
+
   return (
     <motion.header
       initial={{ opacity: 0, y: -10 }}
@@ -22,9 +24,19 @@ const DashboardHeader = () => {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Database className="h-3.5 w-3.5" />
-          <span>Demo Mode</span>
+        <div className="flex items-center gap-1">
+          <NavLink to="/" className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors" activeClassName="bg-primary text-primary-foreground" pendingClassName="opacity-50">
+            <LayoutDashboard className="h-3.5 w-3.5" />
+            Dashboard
+          </NavLink>
+          <NavLink to="/match" className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors" activeClassName="bg-primary text-primary-foreground" pendingClassName="opacity-50">
+            <Sparkles className="h-3.5 w-3.5" />
+            AI Match
+          </NavLink>
+          <div className="ml-3 flex items-center gap-2 text-xs text-muted-foreground">
+            <Database className="h-3.5 w-3.5" />
+            <span>Demo Mode</span>
+          </div>
         </div>
       </div>
     </motion.header>
