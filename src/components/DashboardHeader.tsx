@@ -3,7 +3,6 @@ import { Database, Globe, Sparkles, LayoutDashboard } from "lucide-react";
 import { NavLink } from "./NavLink";
 
 const DashboardHeader = () => {
-  const location = useLocation();
 
   return (
     <motion.header
