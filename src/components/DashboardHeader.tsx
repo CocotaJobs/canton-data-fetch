@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { Database, Globe, Sparkles, LayoutDashboard } from "lucide-react";
 import { useLocation } from "react-router-dom";
-import NavLink from "./NavLink";
+import { NavLink } from "./NavLink";
 
 const DashboardHeader = () => {
   const location = useLocation();
