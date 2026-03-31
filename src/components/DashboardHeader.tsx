@@ -27,11 +27,11 @@ const DashboardHeader = () => {
           </div>
         </div>
         <div className="flex items-center gap-1">
-          <NavLink to="/" active={location.pathname === "/"}>
+          <NavLink to="/" className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors" activeClassName="bg-primary text-primary-foreground" pendingClassName="opacity-50">
             <LayoutDashboard className="h-3.5 w-3.5" />
             Dashboard
           </NavLink>
-          <NavLink to="/match" active={location.pathname === "/match"}>
+          <NavLink to="/match" className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors" activeClassName="bg-primary text-primary-foreground" pendingClassName="opacity-50">
             <Sparkles className="h-3.5 w-3.5" />
             AI Match
           </NavLink>
