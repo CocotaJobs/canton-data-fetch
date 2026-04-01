@@ -1,8 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
-import type { Database } from "@/lib/supabase-types";
-
-type ProfileRow = Database["public"]["Tables"]["company_profiles"]["Row"];
 
 export interface CompanyProfile {
   name: string;
@@ -35,7 +32,7 @@ export function useCompanyProfile() {
       if (error) throw error;
       if (!data) return EMPTY_PROFILE;
       return {
-        name: data.name,
+        name: data.name || "",
         industry: data.industry || "",
         description: data.description || "",
         lookingFor: data.looking_for || "",
@@ -46,7 +43,6 @@ export function useCompanyProfile() {
 
   const saveMutation = useMutation({
     mutationFn: async (p: CompanyProfile) => {
-      // Check if a profile exists
       const { data: existing } = await supabase
         .from("company_profiles")
         .select("id")
@@ -64,8 +60,8 @@ export function useCompanyProfile() {
             looking_for: p.lookingFor,
             keywords: p.keywords,
             updated_at: new Date().toISOString(),
-          })
-          .eq("id", existing.id);
+          } as any)
+          .eq("id", (existing as any).id);
         if (error) throw error;
       } else {
         const { error } = await supabase.from("company_profiles").insert({
@@ -74,7 +70,7 @@ export function useCompanyProfile() {
           description: p.description,
           looking_for: p.lookingFor,
           keywords: p.keywords,
-        });
+        } as any);
         if (error) throw error;
       }
     },
@@ -89,7 +85,7 @@ export function useCompanyProfile() {
   return { profile, saveProfile, isLoading };
 }
 
-// Keep backward-compatible exports for components that import directly
+// Backward-compatible exports
 export function loadProfile(): CompanyProfile {
   return EMPTY_PROFILE;
 }

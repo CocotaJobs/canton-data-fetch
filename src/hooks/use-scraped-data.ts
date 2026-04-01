@@ -1,11 +1,6 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
-import type { Database } from "@/lib/supabase-types";
-
-type ScrapedPageRow = Database["public"]["Tables"]["scraped_pages"]["Row"];
-type ScrapedPageInsert = Database["public"]["Tables"]["scraped_pages"]["Insert"];
-type ScrapedPageUpdate = Database["public"]["Tables"]["scraped_pages"]["Update"];
 
 export interface ScrapedPage {
   id: string;
@@ -18,7 +13,6 @@ export interface ScrapedPage {
   error?: string;
 }
 
-// Map DB row to frontend model
 function rowToPage(row: any): ScrapedPage {
   return {
     id: row.id,
@@ -58,7 +52,7 @@ export function useScrapedData() {
         status: page.status,
         error: page.error || null,
         scraped_at: page.scrapedAt,
-      });
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["scraped-pages"] }),
@@ -66,7 +60,7 @@ export function useScrapedData() {
 
   const updatePageMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<ScrapedPage> }) => {
-      const dbUpdates: any = {};
+      const dbUpdates: Record<string, any> = {};
       if (updates.title !== undefined) dbUpdates.title = updates.title;
       if (updates.markdown !== undefined) dbUpdates.markdown = updates.markdown;
       if (updates.description !== undefined) dbUpdates.description = updates.description;
@@ -100,13 +94,11 @@ export function useScrapedData() {
   });
 
   const addPage = useCallback((page: ScrapedPage) => {
-    // Optimistically update cache
     queryClient.setQueryData<ScrapedPage[]>(["scraped-pages"], (old = []) => [page, ...old]);
     addPageMutation.mutate(page);
   }, [addPageMutation, queryClient]);
 
   const updatePage = useCallback((id: string, updates: Partial<ScrapedPage>) => {
-    // Optimistically update cache
     queryClient.setQueryData<ScrapedPage[]>(["scraped-pages"], (old = []) =>
       old.map((p) => (p.id === id ? { ...p, ...updates } : p))
     );
