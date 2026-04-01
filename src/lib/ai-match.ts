@@ -124,18 +124,24 @@ export async function* streamChat(
   matchResults?: MatchResult[],
   scrapedContext?: string
 ): AsyncGenerator<string> {
-  const res = await fetch(apiUrl("ai-match"), {
-    method: "POST",
-    headers: authHeaders(),
-    body: JSON.stringify({
-      mode: "chat",
-      messages,
-      companyProfile: profile,
-      exhibitors,
-      matchResults,
-      scrapedContext,
-    }),
-  });
+  assertApiBase();
+  let res: Response;
+  try {
+    res = await fetch(apiUrl("ai-match"), {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({
+        mode: "chat",
+        messages,
+        companyProfile: profile,
+        exhibitors,
+        matchResults,
+        scrapedContext,
+      }),
+    });
+  } catch (err) {
+    wrapNetworkError(err);
+  }
 
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
