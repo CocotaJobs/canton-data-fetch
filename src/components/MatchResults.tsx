@@ -12,9 +12,9 @@ interface Props {
 }
 
 function scoreColor(score: number) {
-  if (score >= 80) return "bg-accent text-accent-foreground";
-  if (score >= 60) return "bg-primary text-primary-foreground";
-  if (score >= 40) return "bg-secondary text-secondary-foreground";
+  if (score >= 80) return "bg-success text-success-foreground";
+  if (score >= 60) return "bg-secondary text-secondary-foreground";
+  if (score >= 40) return "bg-muted text-muted-foreground";
   return "bg-muted text-muted-foreground";
 }
 
@@ -32,8 +32,8 @@ const MatchResults = ({ matches, exhibitors }: Props) => {
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base font-display">
-            <Award className="h-4 w-4 text-accent" />
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Award className="h-4 w-4 text-secondary" />
             Match Results
             <Badge variant="secondary" className="ml-auto text-xs">{enriched.length} found</Badge>
           </CardTitle>
@@ -49,7 +49,7 @@ const MatchResults = ({ matches, exhibitors }: Props) => {
                   initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.05 }}
-                  className="rounded-lg border border-border bg-background p-3 cursor-pointer hover:shadow-elevated transition-shadow"
+                  className="rounded-sm border border-border bg-background p-3 cursor-pointer hover:shadow-elevated transition-shadow"
                   onClick={() => setExpanded(isOpen ? null : ex.id)}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -82,12 +82,12 @@ const MatchResults = ({ matches, exhibitors }: Props) => {
                             <span>Booth: {ex.booth}</span>
                             <span>Phase {ex.phase}</span>
                             {ex.email && (
-                              <a href={`mailto:${ex.email}`} className="flex items-center gap-1 text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
+                              <a href={`mailto:${ex.email}`} className="flex items-center gap-1 text-foreground hover:text-secondary" onClick={(e) => e.stopPropagation()}>
                                 <Mail className="h-3 w-3" /> Email
                               </a>
                             )}
                             {ex.website && (
-                              <a href={ex.website} target="_blank" rel="noopener" className="flex items-center gap-1 text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
+                              <a href={ex.website} target="_blank" rel="noopener" className="flex items-center gap-1 text-foreground hover:text-secondary" onClick={(e) => e.stopPropagation()}>
                                 <ExternalLink className="h-3 w-3" /> Website
                               </a>
                             )}

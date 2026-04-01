@@ -33,13 +33,9 @@ const CompanyProfileForm = ({ onSubmit, isLoading }: Props) => {
     setIsExtracting(true);
     try {
       toast({ title: "Analisando site...", description: "Extraindo conteúdo com Firecrawl" });
-
       const scrapeResult = await scrapeWebsite(websiteUrl.trim());
-
       toast({ title: "Conteúdo extraído!", description: "IA analisando o perfil da empresa..." });
-
       const extracted = await extractProfileFromWebsite(scrapeResult.markdown, websiteUrl.trim());
-
       setProfile((prev) => ({
         name: extracted.name || prev.name,
         industry: extracted.industry || prev.industry,
@@ -47,7 +43,6 @@ const CompanyProfileForm = ({ onSubmit, isLoading }: Props) => {
         lookingFor: extracted.lookingFor || prev.lookingFor,
         keywords: extracted.keywords || prev.keywords,
       }));
-
       toast({
         title: "Perfil extraído com sucesso!",
         description: "Revise os campos e ajuste se necessário antes de buscar matches.",
@@ -67,15 +62,15 @@ const CompanyProfileForm = ({ onSubmit, isLoading }: Props) => {
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
       <Card>
         <CardHeader className="pb-4">
-          <CardTitle className="flex items-center gap-2 text-base font-display">
-            <Building2 className="h-4 w-4 text-primary" />
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Building2 className="h-4 w-4 text-foreground" />
             Company Profile
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Website URL extraction */}
-          <div className="rounded-lg border border-dashed border-primary/30 bg-primary/5 p-4 space-y-3">
-            <div className="flex items-center gap-2 text-sm font-medium text-primary">
+          <div className="rounded-sm border border-dashed border-secondary bg-secondary/10 p-4 space-y-3">
+            <div className="flex items-center gap-2 text-sm font-medium text-foreground">
               <Globe className="h-4 w-4" />
               Importar perfil do site
             </div>

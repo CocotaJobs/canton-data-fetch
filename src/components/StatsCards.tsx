@@ -13,27 +13,27 @@ const StatsCards = ({ jobs, totalExhibitors }: StatsCardsProps) => {
   const totalErrors = jobs.reduce((sum, j) => sum + j.errors, 0);
 
   const stats = [
-    { label: "Total Exhibitors", value: totalExhibitors, icon: Users, color: "text-primary" },
+    { label: "Total Exhibitors", value: totalExhibitors, icon: Users, color: "text-foreground" },
     { label: "Running Jobs", value: running, icon: Clock, color: "text-warning" },
     { label: "Completed", value: completed, icon: CheckCircle2, color: "text-success" },
     { label: "Errors", value: totalErrors, icon: AlertCircle, color: "text-destructive" },
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
       {stats.map((stat, i) => (
         <motion.div
           key={stat.label}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 + i * 0.05 }}
-          className="rounded-xl border border-border bg-card p-4 shadow-card"
+          className="rounded-lg bg-card p-5 shadow-card"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-muted-foreground">{stat.label}</span>
             <stat.icon className={`h-4 w-4 ${stat.color}`} />
           </div>
-          <p className="mt-2 text-2xl font-bold font-display text-foreground">{stat.value}</p>
+          <p className="mt-2 text-2xl font-semibold text-foreground">{stat.value}</p>
         </motion.div>
       ))}
     </div>
