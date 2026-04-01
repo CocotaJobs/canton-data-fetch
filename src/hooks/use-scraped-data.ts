@@ -1,6 +1,11 @@
 import { useState, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import type { Database } from "@/lib/supabase-types";
+
+type ScrapedPageRow = Database["public"]["Tables"]["scraped_pages"]["Row"];
+type ScrapedPageInsert = Database["public"]["Tables"]["scraped_pages"]["Insert"];
+type ScrapedPageUpdate = Database["public"]["Tables"]["scraped_pages"]["Update"];
 
 export interface ScrapedPage {
   id: string;

@@ -1,5 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import type { Database } from "@/lib/supabase-types";
+
+type ProfileRow = Database["public"]["Tables"]["company_profiles"]["Row"];
 
 export interface CompanyProfile {
   name: string;
