@@ -39,19 +39,39 @@ function describeApiError(status: number, errorMsg: string, context: string): st
   return errorMsg || `${context} falhou: ${status}`;
 }
 
-export async function scrapeWebsite(url: string): Promise<{ markdown: string; title: string }> {
-  const res = await fetch(apiUrl("scrape-website"), {
-    method: "POST",
-    headers: authHeaders(),
-    body: JSON.stringify({ url }),
-  });
-
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(describeApiError(res.status, data.error || "", "Scrape"));
+function assertApiBase() {
+  if (!API_BASE) {
+    throw new Error("VITE_API_BASE_URL não configurada. Defina nas env vars da Vercel com a URL do seu deploy (ex: https://seu-projeto.vercel.app).");
   }
+}
 
-  return res.json();
+function wrapNetworkError(err: unknown): never {
+  if (err instanceof TypeError && err.message === "Failed to fetch") {
+    throw new Error(
+      `Não foi possível conectar a ${API_BASE || "(vazio)"}. Verifique: 1) VITE_API_BASE_URL está correta, 2) O deploy da Vercel está ativo, 3) Você não está testando no preview do Lovable (as serverless functions só funcionam na Vercel).`
+    );
+  }
+  throw err;
+}
+
+export async function scrapeWebsite(url: string): Promise<{ markdown: string; title: string }> {
+  assertApiBase();
+  try {
+    const res = await fetch(apiUrl("scrape-website"), {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ url }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(describeApiError(res.status, data.error || "", "Scrape"));
+    }
+
+    return res.json();
+  } catch (err) {
+    return wrapNetworkError(err);
+  }
 }
 
 export async function extractProfileFromWebsite(
@@ -77,19 +97,24 @@ export async function findMatches(
   profile: CompanyProfile,
   exhibitors: Exhibitor[]
 ): Promise<MatchResult[]> {
-  const res = await fetch(apiUrl("ai-match"), {
-    method: "POST",
-    headers: authHeaders(),
-    body: JSON.stringify({ mode: "match", companyProfile: profile, exhibitors }),
-  });
+  assertApiBase();
+  try {
+    const res = await fetch(apiUrl("ai-match"), {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ mode: "match", companyProfile: profile, exhibitors }),
+    });
 
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(describeApiError(res.status, data.error || "", "Match"));
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(describeApiError(res.status, data.error || "", "Match"));
+    }
+
+    const data = await res.json();
+    return data.matches as MatchResult[];
+  } catch (err) {
+    return wrapNetworkError(err);
   }
-
-  const data = await res.json();
-  return data.matches as MatchResult[];
 }
 
 export async function* streamChat(
@@ -99,18 +124,24 @@ export async function* streamChat(
   matchResults?: MatchResult[],
   scrapedContext?: string
 ): AsyncGenerator<string> {
-  const res = await fetch(apiUrl("ai-match"), {
-    method: "POST",
-    headers: authHeaders(),
-    body: JSON.stringify({
-      mode: "chat",
-      messages,
-      companyProfile: profile,
-      exhibitors,
-      matchResults,
-      scrapedContext,
-    }),
-  });
+  assertApiBase();
+  let res: Response;
+  try {
+    res = await fetch(apiUrl("ai-match"), {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({
+        mode: "chat",
+        messages,
+        companyProfile: profile,
+        exhibitors,
+        matchResults,
+        scrapedContext,
+      }),
+    });
+  } catch (err) {
+    wrapNetworkError(err);
+  }
 
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
