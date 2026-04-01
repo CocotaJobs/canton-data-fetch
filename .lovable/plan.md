@@ -1,63 +1,48 @@
 
 
-# Redesign da Interface - Novo Design System
+# Redesign Elegante - Glassmorphism e Gradientes
 
 ## Resumo
 
-Aplicar o novo design system com paleta quente (beige/cream), cards arredondados (24px), tipografia Inter, e estilo de dashboard moderno e amigável em toda a aplicação.
+Adicionar efeito glassmorphism nos cards e header, background com gradiente animado usando a paleta existente (beige, yellow, dark), e visual mais sofisticado em toda a aplicação.
 
 ## Alterações
 
-### 1. Atualizar CSS Variables e Tema (`src/index.css`)
-- Trocar toda a paleta de cores para o novo esquema:
-  - Background: `#E8E3D8` (warm beige)
-  - Surface/Card: `#FFFFFF`
-  - Primary: `#2D2D2D` (dark)
-  - Secondary/Accent: `#F4D03F` (yellow)
-  - Text: `#2D2D2D`, `#666666`, `#999999`
-  - Border: `#D4CFC4`
-  - Success/Warning/Error atualizados
-- Atualizar shadows para os novos valores (softer)
-- Remover font Space Grotesk, usar apenas Inter
-- Atualizar radius base para 24px
+### 1. Background com gradiente elaborado (`src/index.css`)
+- Adicionar gradient mesh no body usando as cores da paleta (beige `#E8E3D8`, yellow `#F4D03F`, warm tones)
+- Criar blobs/orbs decorativos com gradientes suaves posicionados com CSS (fixed, z-0)
+- Adicionar animação lenta de movimento nos orbs para dar vida ao background
 
-### 2. Atualizar Tailwind Config (`tailwind.config.ts`)
-- Remover font-display (Space Grotesk)
-- Ajustar font-family para Inter only
-- Atualizar border-radius tokens (lg: 24px, md: 20px, sm: 16px)
+### 2. Glassmorphism nos Cards (`src/components/ui/card.tsx` + `src/index.css`)
+- Cards com `backdrop-filter: blur(16px)`, background semi-transparente `rgba(255,255,255,0.7)`, borda sutil `rgba(255,255,255,0.3)`
+- Atualizar CSS variables do card para suportar transparência
+- Adicionar classe utilitária `.glass` no CSS
 
-### 3. Atualizar Componentes UI Base
-- **Button** (`src/components/ui/button.tsx`): radius 20px, primary com bg `#2D2D2D`, secondary com bg `#F4D03F`
-- **Card** (`src/components/ui/card.tsx`): radius 24px, sem border, shadow suave, padding 20px
-- **Input** (`src/components/ui/input.tsx`): radius 16px, border `#D4CFC4`
-- **Badge** (`src/components/ui/badge.tsx`): radius 20px
+### 3. Header com glass effect (`src/components/DashboardHeader.tsx`)
+- Header com backdrop-blur, background semi-transparente, border-bottom sutil
+- Posição sticky para manter o efeito glass visível durante scroll
 
-### 4. Atualizar DashboardHeader
-- Background warm, remover gradient-primary do logo
-- Usar estilo dark chip para nav items ativos
-- Tipografia mais leve (h1 weight 400)
+### 4. Gradientes nos elementos de destaque
+- Logo icon com gradiente (dark → yellow)
+- Botões primary com gradiente sutil
+- Badges e chips com gradiente
+- Stats cards com borda gradiente ou accent gradient sutil
 
-### 5. Atualizar Componentes de Página
-- **ScrapeControls**: Cards com radius 24px, botões com novo estilo
-- **StatsCards**: Cards brancos sem border, shadow suave, radius 24px
-- **JobsTable**: Card com radius 24px, estilo de tabela mais clean
-- **ExhibitorTable**: Mesmo tratamento
-- **CompanyProfileForm**: Card com novo estilo, área de import com fundo amarelo sutil
-- **MatchResults**: Cards com novo radius e cores
-- **MatchChat**: Bolhas de chat com novo estilo, suggestions como chips dark
+### 5. Pages layout (`src/pages/Index.tsx`, `src/pages/Match.tsx`)
+- Adicionar container de orbs decorativos como background layer
+- Garantir que o conteúdo fica acima (z-10)
 
-### 6. Remover `src/App.css`
-- Arquivo legado não utilizado
+### 6. Componentes menores
+- `StatsCards`: glass effect com hover glow
+- `MatchChat`: bolhas com glass sutil
+- `CompanyProfileForm`: área de import com glass
+- `Button`: variant primary com gradiente
 
-## Detalhes Técnicos
+## Detalhes Tecnnicos
 
-Cores CSS convertidas para HSL:
-- `#E8E3D8` → `40 24% 88%`
-- `#2D2D2D` → `0 0% 18%`
-- `#F4D03F` → `47 89% 60%`
-- `#D4CFC4` → `41 17% 80%`
-- `#666666` → `0 0% 40%`
-- `#999999` → `0 0% 60%`
+Background orbs implementados via CSS `::before`/`::after` no body ou via divs fixas nas pages. Gradientes usam as cores existentes da paleta:
+- `#E8E3D8` (beige) → `#F4D03F` (yellow) → `#2D2D2D` (dark)
+- Opacidades baixas (10-30%) para manter legibilidade
 
-Shadows usarão rgba diretamente via custom properties em vez de HSL.
+Glass effect: `backdrop-filter: blur(16px); background: rgba(255,255,255,0.65); border: 1px solid rgba(255,255,255,0.3);`
 
