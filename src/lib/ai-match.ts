@@ -29,7 +29,7 @@ function authHeaders(): Record<string, string> {
 export async function scrapeWebsite(url: string): Promise<{ markdown: string; title: string }> {
   const res = await fetch(apiUrl("scrape-website"), {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders(),
     body: JSON.stringify({ url }),
   });
 
