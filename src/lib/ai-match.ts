@@ -47,7 +47,7 @@ export async function extractProfileFromWebsite(
 ): Promise<CompanyProfile> {
   const res = await fetch(apiUrl("ai-match"), {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders(),
     body: JSON.stringify({ mode: "extract-profile", websiteContent, websiteUrl }),
   });
 
