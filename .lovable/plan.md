@@ -1,67 +1,63 @@
 
 
-# AI-Powered Exhibitor Matching & Chat
+# Redesign da Interface - Novo Design System
 
-## Overview
+## Resumo
 
-Add a new page `/match` with three sections:
-1. **Company Profile** — a form where the user describes their company (name, industry, what they're looking for, keywords)
-2. **AI Matching Results** — AI analyzes exhibitors against the company profile and returns ranked matches with relevance scores and reasoning
-3. **Chat Interface** — a conversational panel to refine the analysis, ask follow-up questions, and get deeper insights about specific exhibitors
+Aplicar o novo design system com paleta quente (beige/cream), cards arredondados (24px), tipografia Inter, e estilo de dashboard moderno e amigável em toda a aplicação.
 
-## Architecture
+## Alterações
 
-- **Backend**: A Supabase Edge Function (`ai-match`) that calls Lovable AI Gateway with the company context + exhibitor data, supporting both "match" and "chat" modes
-- **Frontend**: New `/match` route with a split layout — profile + results on top, chat below
+### 1. Atualizar CSS Variables e Tema (`src/index.css`)
+- Trocar toda a paleta de cores para o novo esquema:
+  - Background: `#E8E3D8` (warm beige)
+  - Surface/Card: `#FFFFFF`
+  - Primary: `#2D2D2D` (dark)
+  - Secondary/Accent: `#F4D03F` (yellow)
+  - Text: `#2D2D2D`, `#666666`, `#999999`
+  - Border: `#D4CFC4`
+  - Success/Warning/Error atualizados
+- Atualizar shadows para os novos valores (softer)
+- Remover font Space Grotesk, usar apenas Inter
+- Atualizar radius base para 24px
 
-## Plan
+### 2. Atualizar Tailwind Config (`tailwind.config.ts`)
+- Remover font-display (Space Grotesk)
+- Ajustar font-family para Inter only
+- Atualizar border-radius tokens (lg: 24px, md: 20px, sm: 16px)
 
-### 1. Create Edge Function `supabase/functions/ai-match/index.ts`
+### 3. Atualizar Componentes UI Base
+- **Button** (`src/components/ui/button.tsx`): radius 20px, primary com bg `#2D2D2D`, secondary com bg `#F4D03F`
+- **Card** (`src/components/ui/card.tsx`): radius 24px, sem border, shadow suave, padding 20px
+- **Input** (`src/components/ui/input.tsx`): radius 16px, border `#D4CFC4`
+- **Badge** (`src/components/ui/badge.tsx`): radius 20px
 
-- Accepts two modes via POST body:
-  - `mode: "match"` — receives `companyProfile` (text) + `exhibitors` (array) → returns ranked matches with scores and reasoning via structured tool calling
-  - `mode: "chat"` — receives `messages` (conversation history) + `companyProfile` + `exhibitors` → streams a conversational response for refinement
-- Uses `LOVABLE_API_KEY` to call `https://ai.gateway.lovable.dev/v1/chat/completions`
-- Streaming for chat mode, non-streaming structured output for match mode
-- Handles 429/402 errors
+### 4. Atualizar DashboardHeader
+- Background warm, remover gradient-primary do logo
+- Usar estilo dark chip para nav items ativos
+- Tipografia mais leve (h1 weight 400)
 
-### 2. Create Company Profile Store (`src/lib/company-profile.ts`)
+### 5. Atualizar Componentes de Página
+- **ScrapeControls**: Cards com radius 24px, botões com novo estilo
+- **StatsCards**: Cards brancos sem border, shadow suave, radius 24px
+- **JobsTable**: Card com radius 24px, estilo de tabela mais clean
+- **ExhibitorTable**: Mesmo tratamento
+- **CompanyProfileForm**: Card com novo estilo, área de import com fundo amarelo sutil
+- **MatchResults**: Cards com novo radius e cores
+- **MatchChat**: Bolhas de chat com novo estilo, suggestions como chips dark
 
-- Simple state type: `{ name, industry, description, lookingFor, keywords }` 
-- Persisted in localStorage so user doesn't re-enter each visit
+### 6. Remover `src/App.css`
+- Arquivo legado não utilizado
 
-### 3. Create Match Page (`src/pages/Match.tsx`)
+## Detalhes Técnicos
 
-**Top section — Company Profile Form:**
-- Fields: Company Name, Industry, Description (textarea), What You're Looking For (textarea), Keywords (comma-separated)
-- "Find Matches" button that sends profile + exhibitor data to the edge function
+Cores CSS convertidas para HSL:
+- `#E8E3D8` → `40 24% 88%`
+- `#2D2D2D` → `0 0% 18%`
+- `#F4D03F` → `47 89% 60%`
+- `#D4CFC4` → `41 17% 80%`
+- `#666666` → `0 0% 40%`
+- `#999999` → `0 0% 60%`
 
-**Middle section — Match Results:**
-- Cards showing matched exhibitors ranked by relevance score (1-100)
-- Each card shows: exhibitor name, booth, score badge, AI reasoning snippet, products overlap
-- Click to expand full detail
-
-**Bottom section — Chat Panel:**
-- Chat interface with message history
-- Pre-loaded context: company profile + exhibitor data + match results
-- User can ask things like "Tell me more about exhibitor X", "Which ones export to Brazil?", "Refine for LED products only"
-- Streaming responses rendered with markdown
-
-### 4. Update Navigation
-
-- Add nav tabs in `DashboardHeader` linking to `/` (Dashboard) and `/match` (AI Matching)
-- Add route in `App.tsx`
-
-### 5. Wire Exhibitor Data
-
-- The match page imports `mockExhibitors` (or fetches from API when backend is connected)
-- Sends the full exhibitor list as context to the AI for matching
-
-## Technical Details
-
-- **Model**: `google/gemini-3-flash-preview` (default, fast and capable)
-- **Match mode**: Uses tool calling with a schema that returns `{ matches: [{ exhibitorId, score, reasoning, suggestedProducts }] }`
-- **Chat mode**: Streams SSE responses, system prompt includes company profile + exhibitor data + previous match results
-- **Edge function config**: `verify_jwt = false` for simplicity (internal tool)
-- Markdown rendering in chat via `react-markdown` (needs install)
+Shadows usarão rgba diretamente via custom properties em vez de HSL.
 
