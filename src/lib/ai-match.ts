@@ -14,9 +14,16 @@ export interface ChatMessage {
 }
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
+const APP_API_KEY = import.meta.env.VITE_APP_API_KEY || "";
 
 function apiUrl(path: string) {
   return `${API_BASE}/api/${path}`;
+}
+
+function authHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (APP_API_KEY) headers["x-api-key"] = APP_API_KEY;
+  return headers;
 }
 
 export async function scrapeWebsite(url: string): Promise<{ markdown: string; title: string }> {

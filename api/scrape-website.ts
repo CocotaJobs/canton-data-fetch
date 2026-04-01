@@ -2,17 +2,28 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "content-type",
+  "Access-Control-Allow-Headers": "content-type, x-api-key",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+function validateApiKey(req: VercelRequest): boolean {
+  const clientKey = req.headers["x-api-key"];
+  const serverKey = process.env.APP_API_KEY;
+  if (!serverKey) return true; // no key configured = open (dev mode)
+  return clientKey === serverKey;
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "OPTIONS") {
-    return res.status(200).setHeader("Access-Control-Allow-Origin", "*").end();
+    return res.status(200).setHeader("Access-Control-Allow-Origin", "*").setHeader("Access-Control-Allow-Headers", "content-type, x-api-key").end();
   }
 
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  if (!validateApiKey(req)) {
+    return res.status(401).json({ error: "Unauthorized: invalid API key" });
   }
 
   try {
