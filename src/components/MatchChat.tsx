@@ -84,7 +84,7 @@ const MatchChat = ({ profile, exhibitors, matchResults }: Props) => {
                     <button
                       key={s}
                       onClick={() => { setInput(s); }}
-                      className="rounded-md bg-primary px-2.5 py-1 text-[11px] text-primary-foreground hover:bg-primary/80 transition-colors"
+                      className="rounded-md gradient-primary px-2.5 py-1 text-[11px] text-primary-foreground hover:opacity-80 transition-opacity"
                     >
                       {s}
                     </button>
@@ -95,7 +95,7 @@ const MatchChat = ({ profile, exhibitors, matchResults }: Props) => {
             <div className="space-y-3">
               {messages.map((msg, i) => (
                 <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                  <div className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}>
+                  <div className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${msg.role === "user" ? "gradient-primary text-primary-foreground" : "glass text-foreground"}`}>
                     {msg.role === "assistant" ? (
                       <div className="prose prose-sm dark:prose-invert max-w-none [&>p]:m-0">
                         <ReactMarkdown>{msg.content || "..."}</ReactMarkdown>

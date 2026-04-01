@@ -32,21 +32,26 @@ const Match = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <DashboardHeader />
-      <main className="mx-auto max-w-5xl space-y-5 px-6 py-6">
-        <CompanyProfileForm onSubmit={handleSubmit} isLoading={isLoading} />
-        {matches.length > 0 && (
-          <MatchResults matches={matches} exhibitors={mockExhibitors} />
-        )}
-        {profile && (
-          <MatchChat
-            profile={profile}
-            exhibitors={mockExhibitors}
-            matchResults={matches.length > 0 ? matches : undefined}
-          />
-        )}
-      </main>
+    <div className="min-h-screen relative">
+      <div className="bg-orbs">
+        <div className="bg-orb-accent" />
+      </div>
+      <div className="relative z-10">
+        <DashboardHeader />
+        <main className="mx-auto max-w-5xl space-y-5 px-6 py-6">
+          <CompanyProfileForm onSubmit={handleSubmit} isLoading={isLoading} />
+          {matches.length > 0 && (
+            <MatchResults matches={matches} exhibitors={mockExhibitors} />
+          )}
+          {profile && (
+            <MatchChat
+              profile={profile}
+              exhibitors={mockExhibitors}
+              matchResults={matches.length > 0 ? matches : undefined}
+            />
+          )}
+        </main>
+      </div>
     </div>
   );
 };

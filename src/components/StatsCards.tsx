@@ -27,7 +27,7 @@ const StatsCards = ({ jobs, totalExhibitors }: StatsCardsProps) => {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 + i * 0.05 }}
-          className="rounded-lg bg-card p-5 shadow-card"
+          className="rounded-lg glass p-5 shadow-card hover:shadow-elevated transition-shadow duration-300"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-muted-foreground">{stat.label}</span>

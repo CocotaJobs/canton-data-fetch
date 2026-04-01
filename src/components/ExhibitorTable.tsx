@@ -21,7 +21,7 @@ const ExhibitorTable = ({ exhibitors, total, page, pageSize, onPageChange }: Exh
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3 }}
-      className="rounded-lg bg-card shadow-card"
+      className="rounded-lg glass shadow-card"
     >
       <div className="flex items-center justify-between border-b border-border px-5 py-3">
         <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
@@ -47,7 +47,7 @@ const ExhibitorTable = ({ exhibitors, total, page, pageSize, onPageChange }: Exh
                 <tr
                   key={ex.id}
                   onClick={() => setExpandedId(expandedId === ex.id ? null : ex.id)}
-                  className="cursor-pointer border-b border-border/50 hover:bg-muted/30 transition-colors"
+                  className="cursor-pointer border-b border-border/50 hover:bg-accent/5 transition-colors"
                 >
                   <td className="px-5 py-3 font-medium text-foreground">{ex.name}</td>
                   <td className="px-5 py-3 font-mono text-xs text-muted-foreground">{ex.booth}</td>
@@ -74,7 +74,7 @@ const ExhibitorTable = ({ exhibitors, total, page, pageSize, onPageChange }: Exh
                 <AnimatePresence>
                   {expandedId === ex.id && (
                     <tr key={`detail-${ex.id}`}>
-                      <td colSpan={6} className="bg-muted/20 px-5 py-0">
+                      <td colSpan={6} className="bg-accent/5 px-5 py-0">
                         <motion.div
                           initial={{ height: 0, opacity: 0 }}
                           animate={{ height: "auto", opacity: 1 }}
@@ -135,14 +135,14 @@ const ExhibitorTable = ({ exhibitors, total, page, pageSize, onPageChange }: Exh
             <button
               disabled={page <= 1}
               onClick={() => onPageChange(page - 1)}
-              className="rounded-md bg-muted px-3 py-1.5 text-xs font-medium text-foreground disabled:opacity-40 hover:bg-muted/80 transition-colors"
+              className="rounded-md glass px-3 py-1.5 text-xs font-medium text-foreground disabled:opacity-40 hover:bg-accent/10 transition-colors"
             >
               Prev
             </button>
             <button
               disabled={page >= totalPages}
               onClick={() => onPageChange(page + 1)}
-              className="rounded-md bg-muted px-3 py-1.5 text-xs font-medium text-foreground disabled:opacity-40 hover:bg-muted/80 transition-colors"
+              className="rounded-md glass px-3 py-1.5 text-xs font-medium text-foreground disabled:opacity-40 hover:bg-accent/10 transition-colors"
             >
               Next
             </button>
