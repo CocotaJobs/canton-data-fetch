@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { loadProfile, saveProfile, type CompanyProfile } from "@/lib/company-profile";
+import { useCompanyProfile, type CompanyProfile } from "@/lib/company-profile";
 import { scrapeWebsite, extractProfileFromWebsite } from "@/lib/ai-match";
 import { useToast } from "@/hooks/use-toast";
 
