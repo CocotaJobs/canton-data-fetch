@@ -25,12 +25,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   if (!validateApiKey(req)) {
-    return res.status(401).json({ error: "Unauthorized: invalid API key" });
+    const hasServerKey = !!process.env.APP_API_KEY;
+    const clientKey = req.headers["x-api-key"] as string || "";
+    const hint = hasServerKey
+      ? `x-api-key recebida (${clientKey.slice(0, 4)}…) não corresponde a APP_API_KEY (${process.env.APP_API_KEY!.slice(0, 4)}…).`
+      : "APP_API_KEY não está definida nas env vars da Vercel.";
+    console.error(`Auth failed: ${hint}`);
+    return res.status(401).json({
+      error: `Unauthorized: ${hint} Verifique VITE_APP_API_KEY no frontend e APP_API_KEY nas env vars da Vercel.`,
+    });
   }
 
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    return res.status(500).json({ error: "OPENAI_API_KEY not configured" });
+    return res.status(500).json({ error: "OPENAI_API_KEY não configurada nas env vars da Vercel." });
   }
 
   try {

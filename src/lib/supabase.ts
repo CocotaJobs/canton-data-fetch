@@ -1,11 +1,16 @@
 import { createClient } from "@supabase/supabase-js";
+import { checkSupabaseConfig } from "./env-check";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
+const { configured, missing } = checkSupabaseConfig();
+
+export const isSupabaseConfigured = configured;
+
+if (!configured) {
   console.warn(
-    "Supabase env vars not set (VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY). Database features will not work."
+    `⚠️ Supabase não configurado. Defina ${missing.join(" e ")} nas env vars da Vercel. O banco de dados não funcionará até que essas variáveis sejam configuradas.`
   );
 }
 
