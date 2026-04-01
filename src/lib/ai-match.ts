@@ -83,7 +83,8 @@ export async function* streamChat(
   messages: ChatMessage[],
   profile: CompanyProfile,
   exhibitors: Exhibitor[],
-  matchResults?: MatchResult[]
+  matchResults?: MatchResult[],
+  scrapedContext?: string
 ): AsyncGenerator<string> {
   const res = await fetch(apiUrl("ai-match"), {
     method: "POST",
@@ -94,6 +95,7 @@ export async function* streamChat(
       companyProfile: profile,
       exhibitors,
       matchResults,
+      scrapedContext,
     }),
   });
 
