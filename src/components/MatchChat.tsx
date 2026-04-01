@@ -6,17 +6,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { streamChat, type ChatMessage, type MatchResult } from "@/lib/ai-match";
+import { streamChat, type ChatMessage } from "@/lib/ai-match";
 import type { CompanyProfile } from "@/lib/company-profile";
-import type { Exhibitor } from "@/lib/api";
 
 interface Props {
   profile: CompanyProfile;
-  exhibitors: Exhibitor[];
-  matchResults?: MatchResult[];
+  scrapedContext: string;
 }
 
-const MatchChat = ({ profile, exhibitors, matchResults }: Props) => {
+const MatchChat = ({ profile, scrapedContext }: Props) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -38,7 +36,7 @@ const MatchChat = ({ profile, exhibitors, matchResults }: Props) => {
     setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
 
     try {
-      for await (const chunk of streamChat(newMessages, profile, exhibitors, matchResults)) {
+      for await (const chunk of streamChat(newMessages, profile, [], undefined, scrapedContext)) {
         assistantContent += chunk;
         setMessages((prev) => {
           const copy = [...prev];
@@ -59,10 +57,10 @@ const MatchChat = ({ profile, exhibitors, matchResults }: Props) => {
   };
 
   const suggestions = [
-    "Which exhibitors focus on sustainable products?",
-    "Tell me more about the top match",
-    "Which ones could be OEM partners?",
-    "Refine for LED products only",
+    "Summarize the scraped data",
+    "What companies are mentioned?",
+    "Find relevant suppliers for my business",
+    "What products are available?",
   ];
 
   return (
@@ -78,12 +76,12 @@ const MatchChat = ({ profile, exhibitors, matchResults }: Props) => {
           <ScrollArea className="flex-1 pr-2" style={{ maxHeight: 320 }}>
             {messages.length === 0 && (
               <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">Ask follow-up questions about your matches:</p>
+                <p className="text-xs text-muted-foreground">Ask questions about your scraped data:</p>
                 <div className="flex flex-wrap gap-1.5">
                   {suggestions.map((s) => (
                     <button
                       key={s}
-                      onClick={() => { setInput(s); }}
+                      onClick={() => setInput(s)}
                       className="rounded-md gradient-primary px-2.5 py-1 text-[11px] text-primary-foreground hover:opacity-80 transition-opacity"
                     >
                       {s}
@@ -114,7 +112,7 @@ const MatchChat = ({ profile, exhibitors, matchResults }: Props) => {
             onSubmit={(e) => { e.preventDefault(); send(); }}
           >
             <Input
-              placeholder="Ask about your matches..."
+              placeholder="Ask about your scraped data..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
               disabled={streaming}
