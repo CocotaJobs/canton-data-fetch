@@ -16,13 +16,19 @@ interface Props {
 }
 
 const CompanyProfileForm = ({ onSubmit, isLoading }: Props) => {
-  const [profile, setProfile] = useState<CompanyProfile>(loadProfile);
+  const { profile: savedProfile, saveProfile } = useCompanyProfile();
+  const [profile, setProfile] = useState<CompanyProfile>(savedProfile);
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [isExtracting, setIsExtracting] = useState(false);
   const { toast } = useToast();
 
+  // Sync when savedProfile loads from DB
   useEffect(() => {
-    saveProfile(profile);
+    if (savedProfile.name) setProfile(savedProfile);
+  }, [savedProfile]);
+
+  useEffect(() => {
+    if (profile.name) saveProfile(profile);
   }, [profile]);
 
   const update = (field: keyof CompanyProfile, value: string) =>
