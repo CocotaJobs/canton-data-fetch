@@ -26,6 +26,19 @@ function authHeaders(): Record<string, string> {
   return headers;
 }
 
+function describeApiError(status: number, errorMsg: string, context: string): string {
+  if (status === 401) {
+    return `API key inválida (${context}): verifique VITE_APP_API_KEY no frontend e APP_API_KEY nas env vars da Vercel.`;
+  }
+  if (status === 500 && errorMsg.includes("FIRECRAWL_API_KEY")) {
+    return "Firecrawl não configurado: defina FIRECRAWL_API_KEY nas env vars da Vercel.";
+  }
+  if (status === 500 && errorMsg.includes("OPENAI_API_KEY")) {
+    return "OpenAI não configurado: defina OPENAI_API_KEY nas env vars da Vercel.";
+  }
+  return errorMsg || `${context} falhou: ${status}`;
+}
+
 export async function scrapeWebsite(url: string): Promise<{ markdown: string; title: string }> {
   const res = await fetch(apiUrl("scrape-website"), {
     method: "POST",
@@ -35,7 +48,7 @@ export async function scrapeWebsite(url: string): Promise<{ markdown: string; ti
 
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    throw new Error(data.error || `Scrape failed: ${res.status}`);
+    throw new Error(describeApiError(res.status, data.error || "", "Scrape"));
   }
 
   return res.json();
