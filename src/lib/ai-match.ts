@@ -97,19 +97,24 @@ export async function findMatches(
   profile: CompanyProfile,
   exhibitors: Exhibitor[]
 ): Promise<MatchResult[]> {
-  const res = await fetch(apiUrl("ai-match"), {
-    method: "POST",
-    headers: authHeaders(),
-    body: JSON.stringify({ mode: "match", companyProfile: profile, exhibitors }),
-  });
+  assertApiBase();
+  try {
+    const res = await fetch(apiUrl("ai-match"), {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ mode: "match", companyProfile: profile, exhibitors }),
+    });
 
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(describeApiError(res.status, data.error || "", "Match"));
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(describeApiError(res.status, data.error || "", "Match"));
+    }
+
+    const data = await res.json();
+    return data.matches as MatchResult[];
+  } catch (err) {
+    return wrapNetworkError(err);
   }
-
-  const data = await res.json();
-  return data.matches as MatchResult[];
 }
 
 export async function* streamChat(
