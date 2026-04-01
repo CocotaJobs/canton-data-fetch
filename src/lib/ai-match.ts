@@ -84,8 +84,8 @@ export async function findMatches(
   });
 
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Match failed: ${res.status} — ${text}`);
+    const data = await res.json().catch(() => ({}));
+    throw new Error(describeApiError(res.status, data.error || "", "Match"));
   }
 
   const data = await res.json();
