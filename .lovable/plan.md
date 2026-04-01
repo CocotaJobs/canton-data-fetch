@@ -1,77 +1,52 @@
 
 
-# Preparar Backend Supabase via Vercel (sem Lovable Cloud)
+# Melhorar Mensagens de Erro com Identificacao da Fonte
 
-## Resumo
+## Problema
 
-Criar a camada de dados Supabase no projeto, com client configurado via env vars do Vercel, tabelas SQL prontas para deploy, e migrar os hooks de localStorage para queries Supabase. Toda a infraestrutura roda na Vercel — sem Lovable Cloud.
+O app tem 3 integrações que usam API keys diferentes, mas os erros não indicam qual está falhando:
+1. **Supabase** (`VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY`) -- atualmente usando placeholders, causando falhas silenciosas
+2. **Vercel API** (`VITE_API_BASE_URL` + `VITE_APP_API_KEY`) -- scraping e AI match
+3. **Backend keys** (`FIRECRAWL_API_KEY`, `OPENAI_API_KEY`, `APP_API_KEY`) -- no lado servidor
+
+Os requests atuais vão para `placeholder.supabase.co` porque as env vars não estão configuradas.
 
 ## Alterações
 
-### 1. Criar client Supabase (`src/lib/supabase.ts`)
-- Instanciar `createClient` usando `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` (env vars que o usuário configura na Vercel)
-- Exportar o client para uso nos hooks
+### 1. Criar helper de diagnostico (`src/lib/env-check.ts`)
+- Função `checkSupabaseConfig()` que retorna `{ configured: boolean; error?: string }` verificando se URL/key são placeholders
+- Função `checkApiConfig()` que verifica `VITE_API_BASE_URL`
+- Exportar função `getConfigStatus()` que retorna status de todas as integrações
 
-### 2. Criar SQL de tabelas (`supabase/schema.sql` — arquivo de referência)
-- Arquivo SQL que o usuário executa manualmente no Supabase Dashboard
+### 2. Atualizar `src/lib/supabase.ts`
+- Exportar flag `isSupabaseConfigured` (true quando URL e key não são placeholders)
+- Quando não configurado, logar mensagem especifica: "Supabase não configurado: defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY nas env vars da Vercel"
 
-```sql
--- scraped_pages
-CREATE TABLE public.scraped_pages (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  url TEXT NOT NULL,
-  title TEXT DEFAULT '',
-  markdown TEXT DEFAULT '',
-  description TEXT DEFAULT '',
-  status TEXT NOT NULL DEFAULT 'running'
-    CHECK (status IN ('running', 'completed', 'failed')),
-  error TEXT,
-  scraped_at TIMESTAMPTZ DEFAULT now()
-);
-ALTER TABLE public.scraped_pages ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "public_access" ON public.scraped_pages
-  FOR ALL USING (true) WITH CHECK (true);
+### 3. Atualizar `src/hooks/use-scraped-data.ts`
+- Antes de fazer queries, verificar `isSupabaseConfigured`
+- Se não configurado, retornar array vazio sem fazer request, e setar erro descritivo
+- Exibir toast/banner na UI: "Banco de dados não conectado: configure VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY"
 
--- company_profiles
-CREATE TABLE public.company_profiles (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL DEFAULT '',
-  industry TEXT DEFAULT '',
-  description TEXT DEFAULT '',
-  looking_for TEXT DEFAULT '',
-  keywords TEXT DEFAULT '',
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
-ALTER TABLE public.company_profiles ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "public_access" ON public.company_profiles
-  FOR ALL USING (true) WITH CHECK (true);
-```
+### 4. Atualizar `src/lib/ai-match.ts` -- erros descritivos
+- Em `scrapeWebsite()`: se erro 401, mensagem "API key inválida: verifique VITE_APP_API_KEY (client) e APP_API_KEY (Vercel)"
+- Em `scrapeWebsite()`: se erro 500 com "FIRECRAWL_API_KEY", mensagem "Firecrawl não configurado: defina FIRECRAWL_API_KEY nas env vars da Vercel"
+- Em `findMatches()`/`streamChat()`: se erro 500 com "OPENAI_API_KEY", mensagem "OpenAI não configurado: defina OPENAI_API_KEY nas env vars da Vercel"
+- Se erro 401: "API key inválida: verifique VITE_APP_API_KEY no frontend e APP_API_KEY no backend (Vercel)"
 
-### 3. Gerar types TypeScript (`src/lib/supabase-types.ts`)
-- Types manuais que espelham as tabelas para tipagem forte no client
+### 5. Atualizar `api/scrape-website.ts` e `api/ai-match.ts` -- erros detalhados no backend
+- Quando `validateApiKey` falha, retornar mensagem: "Unauthorized: x-api-key header não corresponde a APP_API_KEY. Verifique VITE_APP_API_KEY no frontend e APP_API_KEY nas env vars da Vercel."
+- Quando `FIRECRAWL_API_KEY` ausente: "FIRECRAWL_API_KEY não configurada nas env vars da Vercel"
+- Quando `OPENAI_API_KEY` ausente: "OPENAI_API_KEY não configurada nas env vars da Vercel"
+- Logar prefixo/sufixo (4 chars) da key para debug sem expor o valor completo
 
-### 4. Migrar `useScrapedData` hook para Supabase
-- Substituir localStorage por queries Supabase (`select`, `insert`, `update`, `delete`)
-- Usar React Query (`useQuery` / `useMutation`) para cache e revalidation
-- Manter a mesma interface pública do hook
+### 6. Adicionar banner de status na `Index.tsx`
+- No topo da página, se Supabase ou API não estiverem configurados, mostrar um alert/banner amarelo listando o que falta configurar
+- Usar o componente `Alert` do shadcn com ícone de warning
 
-### 5. Migrar `company-profile.ts` para Supabase
-- Criar hook `useCompanyProfile()` com React Query
-- `loadProfile()` → `select` do último profile
-- `saveProfile()` → `upsert` na tabela
+## Detalhes Tecnicos
 
-### 6. Atualizar `Index.tsx` e `Match.tsx`
-- Adaptar para usar os hooks atualizados (mesma interface, sem mudanças visuais)
-
-### 7. Instalar dependência `@supabase/supabase-js`
-
-## Configuração necessária pelo usuário
-
-O usuário precisará:
-1. Criar um projeto no [supabase.com](https://supabase.com)
-2. Executar o SQL de `supabase/schema.sql` no SQL Editor do Supabase
-3. Adicionar na Vercel as env vars:
-   - `VITE_SUPABASE_URL` — URL do projeto Supabase
-   - `VITE_SUPABASE_ANON_KEY` — chave anon/public
+Mapeamento de erros por status HTTP:
+- `401` → problema de autenticação (API key incorreta ou ausente)
+- `500` + mensagem com nome da env var → env var não configurada no servidor
+- `ERR_NAME_NOT_RESOLVED` / `Failed to fetch` → URL base incorreta ou Supabase não configurado
 
