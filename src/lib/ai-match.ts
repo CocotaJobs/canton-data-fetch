@@ -13,23 +13,53 @@ export interface ChatMessage {
   content: string;
 }
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "";
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
 
-function getEdgeFunctionUrl(fn: string) {
-  return `${SUPABASE_URL}/functions/v1/${fn}`;
+function apiUrl(path: string) {
+  return `${API_BASE}/api/${path}`;
+}
+
+export async function scrapeWebsite(url: string): Promise<{ markdown: string; title: string }> {
+  const res = await fetch(apiUrl("scrape-website"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url }),
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || `Scrape failed: ${res.status}`);
+  }
+
+  return res.json();
+}
+
+export async function extractProfileFromWebsite(
+  websiteContent: string,
+  websiteUrl: string
+): Promise<CompanyProfile> {
+  const res = await fetch(apiUrl("ai-match"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ mode: "extract-profile", websiteContent, websiteUrl }),
+  });
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || `Extract failed: ${res.status}`);
+  }
+
+  const data = await res.json();
+  return data.profile;
 }
 
 export async function findMatches(
   profile: CompanyProfile,
   exhibitors: Exhibitor[]
 ): Promise<MatchResult[]> {
-  const res = await fetch(getEdgeFunctionUrl("ai-match"), {
+  const res = await fetch(apiUrl("ai-match"), {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ mode: "match", companyProfile: profile, exhibitors }),
   });
 
@@ -48,12 +78,9 @@ export async function* streamChat(
   exhibitors: Exhibitor[],
   matchResults?: MatchResult[]
 ): AsyncGenerator<string> {
-  const res = await fetch(getEdgeFunctionUrl("ai-match"), {
+  const res = await fetch(apiUrl("ai-match"), {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       mode: "chat",
       messages,
