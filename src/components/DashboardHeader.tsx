@@ -3,20 +3,19 @@ import { Database, Globe, Sparkles, LayoutDashboard } from "lucide-react";
 import { NavLink } from "./NavLink";
 
 const DashboardHeader = () => {
-
   return (
     <motion.header
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="border-b border-border bg-card px-6 py-4"
+      className="bg-card px-6 py-4 shadow-card"
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg gradient-primary">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
             <Globe className="h-5 w-5 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-xl font-bold font-display tracking-tight text-foreground">
+            <h1 className="text-xl font-normal tracking-tight text-foreground">
               Canton Fair Scraper
             </h1>
             <p className="text-xs text-muted-foreground">

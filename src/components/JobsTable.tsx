@@ -19,10 +19,10 @@ const JobsTable = ({ jobs }: JobsTableProps) => {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.25 }}
-      className="rounded-xl border border-border bg-card shadow-card"
+      className="rounded-lg bg-card shadow-card"
     >
       <div className="border-b border-border px-5 py-3">
-        <h2 className="text-sm font-semibold font-display uppercase tracking-wider text-muted-foreground">
+        <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
           Scrape Jobs
         </h2>
       </div>

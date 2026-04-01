@@ -31,9 +31,9 @@ const ScrapeControls = ({ onStartScrape, isLoading }: ScrapeControlsProps) => {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.1 }}
-      className="rounded-xl border border-border bg-card p-5 shadow-card"
+      className="rounded-lg bg-card p-5 shadow-card"
     >
-      <h2 className="mb-4 text-sm font-semibold font-display uppercase tracking-wider text-muted-foreground">
+      <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-muted-foreground">
         Scrape Controls
       </h2>
       <div className="flex flex-wrap items-end gap-4">
@@ -44,10 +44,10 @@ const ScrapeControls = ({ onStartScrape, isLoading }: ScrapeControlsProps) => {
               <button
                 key={p}
                 onClick={() => setSelectedPhase(p)}
-                className={`flex h-9 w-12 items-center justify-center rounded-lg text-sm font-medium transition-all ${
+                className={`flex h-9 w-12 items-center justify-center rounded-md text-sm font-medium transition-all ${
                   selectedPhase === p
-                    ? "gradient-primary text-primary-foreground shadow-elevated"
-                    : "bg-secondary text-secondary-foreground hover:bg-muted"
+                    ? "bg-primary text-primary-foreground shadow-button"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
                 }`}
               >
                 {p}
@@ -61,13 +61,13 @@ const ScrapeControls = ({ onStartScrape, isLoading }: ScrapeControlsProps) => {
             placeholder="e.g. Electronics, Furniture"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="h-9 bg-secondary/50 text-sm"
+            className="h-9 text-sm"
           />
         </div>
         <Button
           onClick={handleStart}
           disabled={isLoading}
-          className="h-9 gap-2 gradient-primary text-primary-foreground shadow-elevated hover:opacity-90 transition-opacity"
+          className="h-9 gap-2"
         >
           {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
           Start Scraping
