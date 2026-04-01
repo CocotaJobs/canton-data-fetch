@@ -87,7 +87,7 @@ export async function* streamChat(
 ): AsyncGenerator<string> {
   const res = await fetch(apiUrl("ai-match"), {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders(),
     body: JSON.stringify({
       mode: "chat",
       messages,
