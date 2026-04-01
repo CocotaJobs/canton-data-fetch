@@ -1,6 +1,7 @@
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
+import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { toast } from "sonner";
 
 export interface ScrapedPage {
   id: string;
@@ -26,12 +27,24 @@ function rowToPage(row: any): ScrapedPage {
   };
 }
 
+let supabaseWarningShown = false;
+
 export function useScrapedData() {
   const queryClient = useQueryClient();
 
   const { data: pages = [], isLoading } = useQuery({
     queryKey: ["scraped-pages"],
     queryFn: async () => {
+      if (!isSupabaseConfigured) {
+        if (!supabaseWarningShown) {
+          supabaseWarningShown = true;
+          toast.warning("Banco de dados não conectado", {
+            description: "Configure VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY nas env vars da Vercel.",
+            duration: 10000,
+          });
+        }
+        return [];
+      }
       const { data, error } = await supabase
         .from("scraped_pages")
         .select("*")
@@ -43,6 +56,7 @@ export function useScrapedData() {
 
   const addPageMutation = useMutation({
     mutationFn: async (page: ScrapedPage) => {
+      if (!isSupabaseConfigured) return;
       const { error } = await supabase.from("scraped_pages").insert({
         id: page.id,
         url: page.url,
@@ -60,6 +74,7 @@ export function useScrapedData() {
 
   const updatePageMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<ScrapedPage> }) => {
+      if (!isSupabaseConfigured) return;
       const dbUpdates: Record<string, any> = {};
       if (updates.title !== undefined) dbUpdates.title = updates.title;
       if (updates.markdown !== undefined) dbUpdates.markdown = updates.markdown;
@@ -79,6 +94,7 @@ export function useScrapedData() {
 
   const removePageMutation = useMutation({
     mutationFn: async (id: string) => {
+      if (!isSupabaseConfigured) return;
       const { error } = await supabase.from("scraped_pages").delete().eq("id", id);
       if (error) throw error;
     },
@@ -87,6 +103,7 @@ export function useScrapedData() {
 
   const clearAllMutation = useMutation({
     mutationFn: async () => {
+      if (!isSupabaseConfigured) return;
       const { error } = await supabase.from("scraped_pages").delete().neq("id", "00000000-0000-0000-0000-000000000000");
       if (error) throw error;
     },

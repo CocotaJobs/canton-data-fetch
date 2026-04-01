@@ -42,7 +42,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const apiKey = process.env.FIRECRAWL_API_KEY;
     if (!apiKey) {
-      return res.status(500).json({ error: "FIRECRAWL_API_KEY not configured" });
+      return res.status(500).json({ error: "FIRECRAWL_API_KEY não configurada nas env vars da Vercel." });
     }
 
     let formattedUrl = url.trim();

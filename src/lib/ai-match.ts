@@ -113,8 +113,8 @@ export async function* streamChat(
   });
 
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Chat failed: ${res.status} — ${text}`);
+    const data = await res.json().catch(() => ({}));
+    throw new Error(describeApiError(res.status, data.error || "", "Chat"));
   }
 
   const reader = res.body?.getReader();
