@@ -31,7 +31,7 @@ const ScrapeControls = ({ onStartScrape, isLoading }: ScrapeControlsProps) => {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.1 }}
-      className="rounded-lg bg-card p-5 shadow-card"
+      className="rounded-lg glass p-5 shadow-card"
     >
       <h2 className="mb-4 text-sm font-medium uppercase tracking-wider text-muted-foreground">
         Scrape Controls
@@ -46,8 +46,8 @@ const ScrapeControls = ({ onStartScrape, isLoading }: ScrapeControlsProps) => {
                 onClick={() => setSelectedPhase(p)}
                 className={`flex h-9 w-12 items-center justify-center rounded-md text-sm font-medium transition-all ${
                   selectedPhase === p
-                    ? "bg-primary text-primary-foreground shadow-button"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    ? "gradient-primary text-primary-foreground shadow-button"
+                    : "glass text-muted-foreground hover:bg-accent/10"
                 }`}
               >
                 {p}

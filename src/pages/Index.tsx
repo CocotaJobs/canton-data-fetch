@@ -27,7 +27,6 @@ const Index = () => {
     };
     setJobs((prev) => [newJob, ...prev]);
 
-    // Simulate completion
     setTimeout(() => {
       setJobs((prev) =>
         prev.map((j) =>
@@ -41,26 +40,31 @@ const Index = () => {
   }, [jobs.length]);
 
   return (
-    <div className="min-h-screen bg-background">
-      <DashboardHeader />
-      <main className="mx-auto max-w-7xl space-y-5 px-6 py-6">
-        <ScrapeControls onStartScrape={handleStartScrape} isLoading={isLoading} />
-        <StatsCards jobs={jobs} totalExhibitors={mockExhibitors.length} />
-        <div className="grid gap-5 lg:grid-cols-5">
-          <div className="lg:col-span-2">
-            <JobsTable jobs={jobs} />
+    <div className="min-h-screen relative">
+      <div className="bg-orbs">
+        <div className="bg-orb-accent" />
+      </div>
+      <div className="relative z-10">
+        <DashboardHeader />
+        <main className="mx-auto max-w-7xl space-y-5 px-6 py-6">
+          <ScrapeControls onStartScrape={handleStartScrape} isLoading={isLoading} />
+          <StatsCards jobs={jobs} totalExhibitors={mockExhibitors.length} />
+          <div className="grid gap-5 lg:grid-cols-5">
+            <div className="lg:col-span-2">
+              <JobsTable jobs={jobs} />
+            </div>
+            <div className="lg:col-span-3">
+              <ExhibitorTable
+                exhibitors={mockExhibitors}
+                total={mockExhibitors.length}
+                page={page}
+                pageSize={20}
+                onPageChange={setPage}
+              />
+            </div>
           </div>
-          <div className="lg:col-span-3">
-            <ExhibitorTable
-              exhibitors={mockExhibitors}
-              total={mockExhibitors.length}
-              page={page}
-              pageSize={20}
-              onPageChange={setPage}
-            />
-          </div>
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 };

@@ -19,7 +19,7 @@ const JobsTable = ({ jobs }: JobsTableProps) => {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.25 }}
-      className="rounded-lg bg-card shadow-card"
+      className="rounded-lg glass shadow-card"
     >
       <div className="border-b border-border px-5 py-3">
         <h2 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
@@ -40,7 +40,7 @@ const JobsTable = ({ jobs }: JobsTableProps) => {
           </thead>
           <tbody>
             {jobs.map((job) => (
-              <tr key={job.id} className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors">
+              <tr key={job.id} className="border-b border-border/50 last:border-0 hover:bg-accent/5 transition-colors">
                 <td className="px-5 py-3 font-mono text-xs text-muted-foreground">#{job.id}</td>
                 <td className="px-5 py-3 font-medium text-foreground">Phase {job.phase}</td>
                 <td className="px-5 py-3 text-muted-foreground">{job.category || "All"}</td>

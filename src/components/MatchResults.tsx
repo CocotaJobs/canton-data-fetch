@@ -49,7 +49,7 @@ const MatchResults = ({ matches, exhibitors }: Props) => {
                   initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.05 }}
-                  className="rounded-sm border border-border bg-background p-3 cursor-pointer hover:shadow-elevated transition-shadow"
+                  className="rounded-lg glass p-3 cursor-pointer hover:shadow-elevated transition-shadow"
                   onClick={() => setExpanded(isOpen ? null : ex.id)}
                 >
                   <div className="flex items-start justify-between gap-3">

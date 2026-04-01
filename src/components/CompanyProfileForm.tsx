@@ -69,7 +69,7 @@ const CompanyProfileForm = ({ onSubmit, isLoading }: Props) => {
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Website URL extraction */}
-          <div className="rounded-sm border border-dashed border-secondary bg-secondary/10 p-4 space-y-3">
+          <div className="rounded-lg glass border border-dashed border-secondary/40 p-4 space-y-3">
             <div className="flex items-center gap-2 text-sm font-medium text-foreground">
               <Globe className="h-4 w-4" />
               Importar perfil do site
