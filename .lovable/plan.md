@@ -1,70 +1,77 @@
 
 
-# Remover Mock Data e Adicionar Scraping Real com Visualização de Dados
+# Preparar Backend Supabase via Vercel (sem Lovable Cloud)
 
 ## Resumo
 
-Remover todos os dados mock, implementar scraping real via Vercel serverless function (`api/scrape-website.ts`), e criar um fluxo onde o usuário insere uma URL, o scraping acontece de verdade, e os dados extraídos são exibidos na interface.
-
-## Problema Atual
-
-1. `src/lib/mock-data.ts` contém exhibitors e jobs fictícios usados em `Index.tsx` e `Match.tsx`
-2. O botão "Start Scraping" no dashboard apenas simula com `setTimeout` — não faz scraping real
-3. O endpoint `api/scrape-website.ts` funciona (usa Firecrawl), mas o resultado não é exibido em lugar nenhum no dashboard
-4. Na página `/match`, os exhibitors passados para o AI matcher são todos mock
+Criar a camada de dados Supabase no projeto, com client configurado via env vars do Vercel, tabelas SQL prontas para deploy, e migrar os hooks de localStorage para queries Supabase. Toda a infraestrutura roda na Vercel — sem Lovable Cloud.
 
 ## Alterações
 
-### 1. Deletar `src/lib/mock-data.ts`
-- Remover o arquivo completamente
+### 1. Criar client Supabase (`src/lib/supabase.ts`)
+- Instanciar `createClient` usando `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` (env vars que o usuário configura na Vercel)
+- Exportar o client para uso nos hooks
 
-### 2. Redesenhar `ScrapeControls` para scraping real
-- Trocar os campos "Phase" e "Category" por um campo de URL (o scraping real usa Firecrawl via `api/scrape-website.ts`)
-- Ao clicar "Scrape", chamar o endpoint real e retornar o conteúdo markdown extraído
-- Armazenar os resultados em state (lista de "scraped pages")
+### 2. Criar SQL de tabelas (`supabase/schema.sql` — arquivo de referência)
+- Arquivo SQL que o usuário executa manualmente no Supabase Dashboard
 
-### 3. Criar tipo `ScrapedPage` e gerenciar estado no `Index.tsx`
-- Novo tipo: `{ id, url, title, markdown, scrapedAt, status }`
-- Estado `scrapedPages` em `Index.tsx` (substituindo os mock exhibitors/jobs)
-- Jobs table mostra scrapes reais (URL, status, timestamp)
-- Área de resultados mostra o conteúdo extraído de cada página
+```sql
+-- scraped_pages
+CREATE TABLE public.scraped_pages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  url TEXT NOT NULL,
+  title TEXT DEFAULT '',
+  markdown TEXT DEFAULT '',
+  description TEXT DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'running'
+    CHECK (status IN ('running', 'completed', 'failed')),
+  error TEXT,
+  scraped_at TIMESTAMPTZ DEFAULT now()
+);
+ALTER TABLE public.scraped_pages ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "public_access" ON public.scraped_pages
+  FOR ALL USING (true) WITH CHECK (true);
 
-### 4. Atualizar `StatsCards`
-- Mostrar: Total Scraped, Running, Completed, Errors (baseado em scrapes reais)
-
-### 5. Substituir `ExhibitorTable` por `ScrapedDataTable`
-- Tabela mostra as páginas scraped: URL/Title, status, data
-- Ao expandir uma row, mostra o conteúdo markdown extraído (preview)
-- Botão para ver o conteúdo completo em um dialog/modal
-
-### 6. Atualizar `JobsTable`
-- Adaptar para mostrar scrape jobs reais em vez de mock jobs
-
-### 7. Atualizar `Match.tsx`
-- Remover dependência de `mockExhibitors`
-- Usar os dados scraped como contexto para o AI matcher, ou permitir que o usuário insira dados manualmente
-- Se não houver dados scraped, mostrar mensagem orientando a fazer scraping primeiro
-
-### 8. Persistência local com `localStorage`
-- Salvar scraped pages no localStorage para persistir entre reloads
-- Hook `useScrapedData()` para centralizar acesso aos dados
-
-## Detalhes Técnicos
-
-- O endpoint `api/scrape-website.ts` já funciona e retorna `{ success, markdown, title, description, sourceURL }`
-- O frontend já tem `authHeaders()` configurado em `src/lib/ai-match.ts`
-- Criar função `scrapeWebsite()` centralizada (já existe em `ai-match.ts`, reutilizar)
-- Dados scraped ficam em memória + localStorage (sem backend/DB necessário)
-- O conteúdo markdown pode ser renderizado com um simples `<pre>` ou componente de markdown
-
-```text
-Fluxo:
-[User insere URL] → [POST /api/scrape-website] → [Retorna markdown/title]
-                                                         ↓
-                                              [Salva em state + localStorage]
-                                                         ↓
-                                              [Exibe na tabela + stats atualizam]
-                                                         ↓
-                                              [Dados disponíveis para AI Match]
+-- company_profiles
+CREATE TABLE public.company_profiles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL DEFAULT '',
+  industry TEXT DEFAULT '',
+  description TEXT DEFAULT '',
+  looking_for TEXT DEFAULT '',
+  keywords TEXT DEFAULT '',
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+ALTER TABLE public.company_profiles ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "public_access" ON public.company_profiles
+  FOR ALL USING (true) WITH CHECK (true);
 ```
+
+### 3. Gerar types TypeScript (`src/lib/supabase-types.ts`)
+- Types manuais que espelham as tabelas para tipagem forte no client
+
+### 4. Migrar `useScrapedData` hook para Supabase
+- Substituir localStorage por queries Supabase (`select`, `insert`, `update`, `delete`)
+- Usar React Query (`useQuery` / `useMutation`) para cache e revalidation
+- Manter a mesma interface pública do hook
+
+### 5. Migrar `company-profile.ts` para Supabase
+- Criar hook `useCompanyProfile()` com React Query
+- `loadProfile()` → `select` do último profile
+- `saveProfile()` → `upsert` na tabela
+
+### 6. Atualizar `Index.tsx` e `Match.tsx`
+- Adaptar para usar os hooks atualizados (mesma interface, sem mudanças visuais)
+
+### 7. Instalar dependência `@supabase/supabase-js`
+
+## Configuração necessária pelo usuário
+
+O usuário precisará:
+1. Criar um projeto no [supabase.com](https://supabase.com)
+2. Executar o SQL de `supabase/schema.sql` no SQL Editor do Supabase
+3. Adicionar na Vercel as env vars:
+   - `VITE_SUPABASE_URL` — URL do projeto Supabase
+   - `VITE_SUPABASE_ANON_KEY` — chave anon/public
 
