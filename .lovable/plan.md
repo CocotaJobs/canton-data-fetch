@@ -1,48 +1,70 @@
 
 
-# Redesign Elegante - Glassmorphism e Gradientes
+# Remover Mock Data e Adicionar Scraping Real com Visualização de Dados
 
 ## Resumo
 
-Adicionar efeito glassmorphism nos cards e header, background com gradiente animado usando a paleta existente (beige, yellow, dark), e visual mais sofisticado em toda a aplicação.
+Remover todos os dados mock, implementar scraping real via Vercel serverless function (`api/scrape-website.ts`), e criar um fluxo onde o usuário insere uma URL, o scraping acontece de verdade, e os dados extraídos são exibidos na interface.
+
+## Problema Atual
+
+1. `src/lib/mock-data.ts` contém exhibitors e jobs fictícios usados em `Index.tsx` e `Match.tsx`
+2. O botão "Start Scraping" no dashboard apenas simula com `setTimeout` — não faz scraping real
+3. O endpoint `api/scrape-website.ts` funciona (usa Firecrawl), mas o resultado não é exibido em lugar nenhum no dashboard
+4. Na página `/match`, os exhibitors passados para o AI matcher são todos mock
 
 ## Alterações
 
-### 1. Background com gradiente elaborado (`src/index.css`)
-- Adicionar gradient mesh no body usando as cores da paleta (beige `#E8E3D8`, yellow `#F4D03F`, warm tones)
-- Criar blobs/orbs decorativos com gradientes suaves posicionados com CSS (fixed, z-0)
-- Adicionar animação lenta de movimento nos orbs para dar vida ao background
+### 1. Deletar `src/lib/mock-data.ts`
+- Remover o arquivo completamente
 
-### 2. Glassmorphism nos Cards (`src/components/ui/card.tsx` + `src/index.css`)
-- Cards com `backdrop-filter: blur(16px)`, background semi-transparente `rgba(255,255,255,0.7)`, borda sutil `rgba(255,255,255,0.3)`
-- Atualizar CSS variables do card para suportar transparência
-- Adicionar classe utilitária `.glass` no CSS
+### 2. Redesenhar `ScrapeControls` para scraping real
+- Trocar os campos "Phase" e "Category" por um campo de URL (o scraping real usa Firecrawl via `api/scrape-website.ts`)
+- Ao clicar "Scrape", chamar o endpoint real e retornar o conteúdo markdown extraído
+- Armazenar os resultados em state (lista de "scraped pages")
 
-### 3. Header com glass effect (`src/components/DashboardHeader.tsx`)
-- Header com backdrop-blur, background semi-transparente, border-bottom sutil
-- Posição sticky para manter o efeito glass visível durante scroll
+### 3. Criar tipo `ScrapedPage` e gerenciar estado no `Index.tsx`
+- Novo tipo: `{ id, url, title, markdown, scrapedAt, status }`
+- Estado `scrapedPages` em `Index.tsx` (substituindo os mock exhibitors/jobs)
+- Jobs table mostra scrapes reais (URL, status, timestamp)
+- Área de resultados mostra o conteúdo extraído de cada página
 
-### 4. Gradientes nos elementos de destaque
-- Logo icon com gradiente (dark → yellow)
-- Botões primary com gradiente sutil
-- Badges e chips com gradiente
-- Stats cards com borda gradiente ou accent gradient sutil
+### 4. Atualizar `StatsCards`
+- Mostrar: Total Scraped, Running, Completed, Errors (baseado em scrapes reais)
 
-### 5. Pages layout (`src/pages/Index.tsx`, `src/pages/Match.tsx`)
-- Adicionar container de orbs decorativos como background layer
-- Garantir que o conteúdo fica acima (z-10)
+### 5. Substituir `ExhibitorTable` por `ScrapedDataTable`
+- Tabela mostra as páginas scraped: URL/Title, status, data
+- Ao expandir uma row, mostra o conteúdo markdown extraído (preview)
+- Botão para ver o conteúdo completo em um dialog/modal
 
-### 6. Componentes menores
-- `StatsCards`: glass effect com hover glow
-- `MatchChat`: bolhas com glass sutil
-- `CompanyProfileForm`: área de import com glass
-- `Button`: variant primary com gradiente
+### 6. Atualizar `JobsTable`
+- Adaptar para mostrar scrape jobs reais em vez de mock jobs
 
-## Detalhes Tecnnicos
+### 7. Atualizar `Match.tsx`
+- Remover dependência de `mockExhibitors`
+- Usar os dados scraped como contexto para o AI matcher, ou permitir que o usuário insira dados manualmente
+- Se não houver dados scraped, mostrar mensagem orientando a fazer scraping primeiro
 
-Background orbs implementados via CSS `::before`/`::after` no body ou via divs fixas nas pages. Gradientes usam as cores existentes da paleta:
-- `#E8E3D8` (beige) → `#F4D03F` (yellow) → `#2D2D2D` (dark)
-- Opacidades baixas (10-30%) para manter legibilidade
+### 8. Persistência local com `localStorage`
+- Salvar scraped pages no localStorage para persistir entre reloads
+- Hook `useScrapedData()` para centralizar acesso aos dados
 
-Glass effect: `backdrop-filter: blur(16px); background: rgba(255,255,255,0.65); border: 1px solid rgba(255,255,255,0.3);`
+## Detalhes Técnicos
+
+- O endpoint `api/scrape-website.ts` já funciona e retorna `{ success, markdown, title, description, sourceURL }`
+- O frontend já tem `authHeaders()` configurado em `src/lib/ai-match.ts`
+- Criar função `scrapeWebsite()` centralizada (já existe em `ai-match.ts`, reutilizar)
+- Dados scraped ficam em memória + localStorage (sem backend/DB necessário)
+- O conteúdo markdown pode ser renderizado com um simples `<pre>` ou componente de markdown
+
+```text
+Fluxo:
+[User insere URL] → [POST /api/scrape-website] → [Retorna markdown/title]
+                                                         ↓
+                                              [Salva em state + localStorage]
+                                                         ↓
+                                              [Exibe na tabela + stats atualizam]
+                                                         ↓
+                                              [Dados disponíveis para AI Match]
+```
 
