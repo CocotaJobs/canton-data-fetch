@@ -1,7 +1,22 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createClient } from "@supabase/supabase-js";
+import { buildCantonFairPageUrl } from "../src/lib/canton-fair";
 
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
+
+interface ExtractedSupplier {
+  booth?: string;
+  company_name?: string;
+  description?: string;
+  images?: string[];
+  products?: string[];
+  segment?: string;
+  website_url?: string;
+}
+
+interface ExtractSuppliersResult {
+  suppliers?: ExtractedSupplier[];
+}
 
 function setCors(res: VercelResponse): VercelResponse {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -17,6 +32,19 @@ function validateApiKey(req: VercelRequest): boolean {
   return clientKey === serverKey;
 }
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "Erro desconhecido";
+}
+
+function stripUnsafeControlChars(value: string): string {
+  return Array.from(value)
+    .filter((char) => {
+      const code = char.charCodeAt(0);
+      return code === 9 || code === 10 || code === 13 || (code >= 32 && code !== 127);
+    })
+    .join("");
+}
+
 function repairJson(raw: string): unknown {
   // Try direct parse first
   try {
@@ -26,7 +54,7 @@ function repairJson(raw: string): unknown {
     let cleaned = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
 
     // Find JSON boundaries
-    const start = cleaned.search(/[\{\[]/);
+    const start = cleaned.search(/[[{]/);
     const lastBrace = cleaned.lastIndexOf("}");
     const lastBracket = cleaned.lastIndexOf("]");
     const end = Math.max(lastBrace, lastBracket);
@@ -41,8 +69,8 @@ function repairJson(raw: string): unknown {
       // Fix trailing commas
       cleaned = cleaned
         .replace(/,\s*}/g, "}")
-        .replace(/,\s*]/g, "]")
-        .replace(/[\x00-\x1F\x7F]/g, "");
+        .replace(/,\s*]/g, "]");
+      cleaned = stripUnsafeControlChars(cleaned);
       return JSON.parse(cleaned);
     }
   }
@@ -78,14 +106,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const supabase = getSupabaseClient();
 
   try {
-    const { pageNo, categoryId, queryType } = req.body;
+    const { pageNo, categoryId, queryType, searchUrl } = req.body;
 
     if (!pageNo || !categoryId) {
       return res.status(400).json({ error: "pageNo e categoryId são obrigatórios." });
     }
 
     const qt = queryType || 1;
-    const url = `https://365.cantonfair.org.cn/zh-CN/search?queryType=${qt}&fCategoryId=${categoryId}&categoryId=${categoryId}&pageNo=${pageNo}`;
+    const url =
+      typeof searchUrl === "string" && searchUrl.trim()
+        ? buildCantonFairPageUrl(searchUrl, pageNo)
+        : `https://365.cantonfair.org.cn/zh-CN/search?queryType=${qt}&fCategoryId=${categoryId}&categoryId=${categoryId}&pageNo=${pageNo}`;
 
     console.log(`Scraping page ${pageNo}: ${url}`);
 
@@ -192,15 +223,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Robust JSON parsing
-    let result: any;
+    let result: ExtractSuppliersResult;
     try {
-      result = repairJson(toolCall.function.arguments);
-    } catch (jsonErr: any) {
-      console.error("JSON parse error:", jsonErr.message, "Raw:", toolCall.function.arguments.slice(0, 500));
-      return res.status(500).json({ error: `Erro ao parsear resposta da IA: ${jsonErr.message}` });
+      result = repairJson(toolCall.function.arguments) as ExtractSuppliersResult;
+    } catch (jsonErr: unknown) {
+      const errorMessage = getErrorMessage(jsonErr);
+      console.error("JSON parse error:", errorMessage, "Raw:", toolCall.function.arguments.slice(0, 500));
+      return res.status(500).json({ error: `Erro ao parsear resposta da IA: ${errorMessage}` });
     }
 
-    const suppliers = (result.suppliers || []).map((s: any) => ({
+    const suppliers = (result.suppliers || []).map((s) => ({
       company_name: s.company_name,
       description: s.description || "",
       products: s.products || [],
@@ -233,9 +265,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     console.log(`Page ${pageNo}: extracted ${suppliers.length}, saved ${saved}`);
 
-    return res.status(200).json({ suppliers, saved, pageNo });
-  } catch (error: any) {
+    return res.status(200).json({ suppliers, saved, pageNo, resolvedUrl: url });
+  } catch (error: unknown) {
+    const errorMessage = getErrorMessage(error);
     console.error("Crawl error:", error);
-    return res.status(500).json({ error: error.message || "Erro no crawling" });
+    return res.status(500).json({ error: errorMessage });
   }
 }
