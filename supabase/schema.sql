@@ -35,3 +35,22 @@ CREATE TABLE public.company_profiles (
 ALTER TABLE public.company_profiles ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "public_access" ON public.company_profiles
   FOR ALL USING (true) WITH CHECK (true);
+
+-- suppliers
+CREATE TABLE public.suppliers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_name TEXT NOT NULL,
+  description TEXT DEFAULT '',
+  products TEXT[] DEFAULT '{}',
+  segment TEXT DEFAULT '',
+  images TEXT[] DEFAULT '{}',
+  website_url TEXT DEFAULT '',
+  source_url TEXT DEFAULT '',
+  booth TEXT DEFAULT '',
+  raw_content JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE public.suppliers ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "public_access" ON public.suppliers
+  FOR ALL USING (true) WITH CHECK (true);

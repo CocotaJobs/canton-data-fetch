@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Database, Globe, Sparkles, LayoutDashboard } from "lucide-react";
+import { Database, Globe, Sparkles, LayoutDashboard, Factory } from "lucide-react";
 import { NavLink } from "./NavLink";
 
 const DashboardHeader = () => {
@@ -32,6 +32,10 @@ const DashboardHeader = () => {
             <NavLink to="/match" className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors" activeClassName="gradient-primary text-primary-foreground" pendingClassName="opacity-50">
               <Sparkles className="h-3.5 w-3.5" />
               AI Match
+            </NavLink>
+            <NavLink to="/suppliers" className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors" activeClassName="gradient-primary text-primary-foreground" pendingClassName="opacity-50">
+              <Factory className="h-3.5 w-3.5" />
+              Suppliers
             </NavLink>
           </div>
         </div>

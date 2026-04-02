@@ -64,6 +64,46 @@ export interface Database {
           updated_at?: string;
         };
       };
+      suppliers: {
+        Row: {
+          id: string;
+          company_name: string;
+          description: string;
+          products: string[];
+          segment: string;
+          images: string[];
+          website_url: string;
+          source_url: string;
+          booth: string;
+          raw_content: Record<string, unknown>;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          company_name: string;
+          description?: string;
+          products?: string[];
+          segment?: string;
+          images?: string[];
+          website_url?: string;
+          source_url?: string;
+          booth?: string;
+          raw_content?: Record<string, unknown>;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          company_name?: string;
+          description?: string;
+          products?: string[];
+          segment?: string;
+          images?: string[];
+          website_url?: string;
+          source_url?: string;
+          booth?: string;
+          raw_content?: Record<string, unknown>;
+        };
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
