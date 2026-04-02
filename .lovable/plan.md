@@ -1,125 +1,70 @@
 
 
-# Sistema de Crawling Multi-Pagina com Extracao Estruturada e Traducao
+# Corrigir Crawling: Salvamento e Paginacao
 
-## Visao Geral
+## Problemas Identificados
 
-Construir um pipeline que percorre as 88 paginas de suppliers da Canton Fair, extrai dados estruturados de cada supplier usando IA, traduz para portugues e armazena no Supabase.
+### 1. queryType errado na URL
+O codigo usa `queryType=2` hardcoded, mas a URL real do usuario usa `queryType=1`. Isso pode retornar resultados diferentes ou vazios.
 
-## Arquitetura
+### 2. Supabase nao configurado no preview do Lovable
+O `isSupabaseConfigured` retorna `false` no preview, e o insert e silenciosamente ignorado. O crawler reporta sucesso mas nao salva nada. Precisa: (a) mover o insert para o servidor (api/crawl-suppliers.ts), ou (b) mostrar erro claro ao usuario.
 
-```text
-[Frontend: Botao "Crawl Suppliers"]
-         |
-         v
-   Loop pagina 1..88
-         |
-    [api/scrape-website.ts] --Firecrawl--> HTML renderizado da pagina
-         |
-         v
-    [api/ai-match.ts mode="extract-suppliers"]
-         |
-    GPT-4o-mini extrai suppliers estruturados + traduz para PT
-         |
-         v
-    [Supabase: tabela suppliers] -- insert batch
-         |
-    (opcionalmente) para cada supplier com website:
-    [api/scrape-website.ts] --> scrape do site do supplier
-    [api/ai-match.ts] --> enriquecer descricao
-```
+### 3. JSON truncado do OpenAI
+Tool calling ajuda, mas paginas grandes podem gerar respostas truncadas. Precisa validar/reparar o JSON antes de usar.
 
-O frontend orquestra pagina por pagina, mostrando progresso em tempo real. Cada pagina leva ~5-10s (scrape + AI), total estimado: ~10-15 min para 88 paginas.
+### 4. Sem retry em paginas com erro
+Se uma pagina falha, o crawler simplesmente pula e segue. Precisa de retry automatico.
 
-## Alteracoes
+## Plano de Correcao
 
-### 1. Nova tabela Supabase: `suppliers`
+### 1. Corrigir URL de paginacao
+- Usar `queryType=1` (conforme URL do usuario) como default
+- Tornar `queryType` configuravel no frontend
+- Garantir que `pageNo` esta sendo passado corretamente
 
-Migration SQL:
-- `id` UUID PK
-- `company_name` TEXT NOT NULL
-- `description` TEXT (em portugues)
-- `products` TEXT[] (lista de produtos traduzida)
-- `segment` TEXT (categoria/segmento)
-- `images` TEXT[] (URLs das imagens)
-- `website_url` TEXT
-- `source_url` TEXT (link da pagina Canton Fair)
-- `raw_content` JSONB (dados brutos para referencia)
-- `created_at` TIMESTAMPTZ
-- RLS: SELECT e INSERT publicos
+### 2. Mover insert para o servidor (api/crawl-suppliers.ts)
+- Adicionar Supabase server-side no endpoint usando `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` como env vars da Vercel
+- O servidor faz o insert diretamente apos extrair, eliminando dependencia do cliente
+- Frontend recebe confirmacao de quantos foram salvos
+- Remover insert do SupplierCrawler.tsx (apenas exibe resultados)
 
-Atualizar `src/lib/supabase-types.ts` com o tipo da tabela.
+### 3. Adicionar validacao de JSON robusta
+- No `api/crawl-suppliers.ts`, fazer try/catch no `JSON.parse(toolCall.function.arguments)`
+- Se falhar, tentar reparar (trailing commas, brackets desbalanceados)
+- Detectar truncacao antes de parsear
 
-### 2. Novo modo no `api/ai-match.ts`: `extract-suppliers`
+### 4. Adicionar retry automatico
+- Se uma pagina falha, tentar novamente ate 2x com delay de 3s
+- Logar tentativas no frontend
 
-Recebe o markdown de uma pagina de listagem e retorna array de suppliers estruturados, ja traduzidos para portugues. Usa tool calling do OpenAI para garantir formato consistente.
+### 5. Feedback claro no frontend
+- Se Supabase nao esta configurado no servidor, retornar erro explicito
+- Mostrar no log se os dados foram salvos ou apenas extraidos
+- Adicionar contagem de "salvos no banco" vs "extraidos"
 
-Prompt: "Extraia todos os suppliers desta pagina. Para cada um, retorne: nome da empresa, descricao dos produtos, lista de produtos, segmento/categoria, URLs de imagens, e URL do site se disponivel. Traduza tudo para portugues brasileiro."
+## Arquivos a alterar
 
-### 3. Nova funcao serverless `api/crawl-suppliers.ts`
-
-Funcao auxiliar que faz scrape de UMA pagina e extrai suppliers. Recebe `{ pageNo, categoryId }`, faz o scrape via Firecrawl, e chama o modo `extract-suppliers`. Retorna os suppliers extraidos.
-
-Isso evita timeout: o frontend chama uma pagina por vez.
-
-### 4. Frontend: Nova pagina `/suppliers`
-
-- Formulario com URL base e range de paginas (1-88)
-- Botao "Iniciar Crawling"
-- Barra de progresso mostrando pagina atual / total
-- Log em tempo real das paginas processadas
-- Tabela de suppliers ja extraidos com filtros por segmento
-
-### 5. Frontend: Componente `SupplierCrawler`
-
-Orquestra o loop:
-1. Para cada pagina de 1 a N:
-   - Chama `api/crawl-suppliers?pageNo=X`
-   - Recebe suppliers extraidos
-   - Insere no Supabase via client
-   - Atualiza progresso
-2. Ao final, exibe resumo
-
-### 6. Frontend: Componente `SuppliersTable`
-
-Tabela para visualizar suppliers salvos no Supabase:
-- Colunas: Nome, Segmento, Produtos, Site
-- Expandir para ver descricao completa e imagens
-- Filtro por segmento
-- Contagem total
-
-### 7. Enriquecimento opcional (fase 2)
-
-Para suppliers que tem website, o usuario pode clicar "Enriquecer" para:
-- Scrape do site externo via Firecrawl
-- AI extrai contexto adicional
-- Atualiza descricao e produtos no Supabase
-
-### 8. Rota e navegacao
-
-- Adicionar rota `/suppliers` no `App.tsx`
-- Adicionar link no `DashboardHeader`
+- `api/crawl-suppliers.ts` — corrigir queryType, adicionar Supabase server-side insert, validar JSON
+- `src/components/SupplierCrawler.tsx` — remover insert client-side, adicionar retry, tornar queryType configuravel, melhorar feedback
+- `src/components/SuppliersTable.tsx` — sem mudancas significativas
 
 ## Detalhes Tecnicos
 
-- Paginacao Canton Fair: `queryType=2` (suppliers) + `pageNo=N` + `categoryId=...`
-- O site e SPA com JS rendering - Firecrawl lida com isso
-- Cada pagina mostra ~20 suppliers
-- Total estimado: ~1,760 suppliers
-- Timeout: cada chamada processa 1 pagina (~5s scrape + ~3s AI), bem dentro do limite Vercel
-- Traducao integrada no prompt do OpenAI (sem camada separada)
-- Rate limiting: delay de 1s entre paginas no frontend para nao sobrecarregar Firecrawl
+URL corrigida:
+```
+https://365.cantonfair.org.cn/zh-CN/search?queryType=1&fCategoryId=${categoryId}&categoryId=${categoryId}&pageNo=${pageNo}
+```
 
-## Arquivos a criar/modificar
+Supabase server-side (em crawl-suppliers.ts):
+```typescript
+import { createClient } from "@supabase/supabase-js";
+const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+// Insert apos extrair suppliers
+await supabase.from("suppliers").insert(rows);
+```
 
-- `supabase/schema.sql` — adicionar tabela suppliers
-- Nova migration SQL para suppliers
-- `src/lib/supabase-types.ts` — adicionar tipo Suppliers
-- `api/crawl-suppliers.ts` — nova funcao serverless
-- `api/ai-match.ts` — novo modo extract-suppliers
-- `src/pages/Suppliers.tsx` — nova pagina
-- `src/components/SupplierCrawler.tsx` — componente de crawling
-- `src/components/SuppliersTable.tsx` — tabela de suppliers
-- `src/App.tsx` — nova rota
-- `src/components/DashboardHeader.tsx` — link de navegacao
+Env vars necessarias na Vercel:
+- `SUPABASE_URL` (ja deve existir)
+- `SUPABASE_SERVICE_ROLE_KEY` (service role para insert server-side)
 
