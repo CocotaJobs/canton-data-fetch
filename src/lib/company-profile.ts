@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
+import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 
 export interface CompanyProfile {
   name: string;
@@ -23,6 +23,7 @@ export function useCompanyProfile() {
   const { data: profile = EMPTY_PROFILE, isLoading } = useQuery({
     queryKey: ["company-profile"],
     queryFn: async () => {
+      if (!isSupabaseConfigured) return EMPTY_PROFILE;
       const { data, error } = await supabase
         .from("company_profiles")
         .select("*")
@@ -43,6 +44,10 @@ export function useCompanyProfile() {
 
   const saveMutation = useMutation({
     mutationFn: async (p: CompanyProfile) => {
+      if (!isSupabaseConfigured) {
+        console.warn("Supabase não configurado — perfil salvo apenas localmente.");
+        return;
+      }
       const { data: existing } = await supabase
         .from("company_profiles")
         .select("id")

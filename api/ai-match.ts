@@ -1,12 +1,13 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "content-type, x-api-key",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
+
+function setCors(res: VercelResponse): VercelResponse {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Headers", "content-type, x-api-key");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  return res;
+}
 
 function validateApiKey(req: VercelRequest): boolean {
   const clientKey = req.headers["x-api-key"];
@@ -16,8 +17,10 @@ function validateApiKey(req: VercelRequest): boolean {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  setCors(res);
+
   if (req.method === "OPTIONS") {
-    return res.status(200).setHeader("Access-Control-Allow-Origin", "*").setHeader("Access-Control-Allow-Headers", "content-type, x-api-key").end();
+    return res.status(200).end();
   }
 
   if (req.method !== "POST") {
@@ -26,7 +29,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (!validateApiKey(req)) {
     const hasServerKey = !!process.env.APP_API_KEY;
-    const clientKey = req.headers["x-api-key"] as string || "";
+    const clientKey = (req.headers["x-api-key"] as string) || "";
     const hint = hasServerKey
       ? `x-api-key recebida (${clientKey.slice(0, 4)}…) não corresponde a APP_API_KEY (${process.env.APP_API_KEY!.slice(0, 4)}…).`
       : "APP_API_KEY não está definida nas env vars da Vercel.";
@@ -47,11 +50,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (mode === "extract-profile") {
       return handleExtractProfile(req, res, apiKey);
     }
-
     if (mode === "match") {
       return handleMatch(req, res, apiKey, companyProfile, exhibitors);
     }
-
     if (mode === "chat") {
       return handleChat(req, res, apiKey, messages, companyProfile, exhibitors, matchResults);
     }
@@ -105,7 +106,7 @@ async function handleExtractProfile(
                 },
                 lookingFor: {
                   type: "string",
-                  description: "What products/services the company likely sources or needs, based on their business",
+                  description: "What products/services the company likely sources or needs",
                 },
                 keywords: {
                   type: "string",
@@ -275,10 +276,10 @@ ${exhibitorSummary}`;
     return res.status(response.status).json({ error: `OpenAI error: ${response.status} — ${text}` });
   }
 
+  // CORS headers already set by setCors() at the top of handler
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
-  res.setHeader("Access-Control-Allow-Origin", "*");
 
   const reader = response.body?.getReader();
   if (!reader) {
