@@ -6,7 +6,6 @@ import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Play, Square, Loader2 } from "lucide-react";
-import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import { toast } from "@/hooks/use-toast";
 
 const RAW_API_BASE = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "");
@@ -21,8 +20,9 @@ function authHeaders(): Record<string, string> {
 
 interface CrawlLog {
   page: number;
-  status: "ok" | "error" | "empty";
+  status: "ok" | "error" | "empty" | "retry";
   count: number;
+  saved: number;
   message: string;
 }
 
@@ -30,25 +30,30 @@ interface SupplierCrawlerProps {
   onComplete?: () => void;
 }
 
+const MAX_RETRIES = 2;
+const RETRY_DELAY = 3000;
+
 const SupplierCrawler = ({ onComplete }: SupplierCrawlerProps) => {
   const [categoryId, setCategoryId] = useState("461147369757478912");
+  const [queryType, setQueryType] = useState(1);
   const [startPage, setStartPage] = useState(1);
   const [endPage, setEndPage] = useState(88);
   const [currentPage, setCurrentPage] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [logs, setLogs] = useState<CrawlLog[]>([]);
   const [totalExtracted, setTotalExtracted] = useState(0);
+  const [totalSaved, setTotalSaved] = useState(0);
   const abortRef = useRef(false);
 
   const addLog = (log: CrawlLog) => {
     setLogs((prev) => [...prev, log]);
   };
 
-  const crawlPage = async (pageNo: number): Promise<number> => {
+  const crawlPage = async (pageNo: number): Promise<{ extracted: number; saved: number }> => {
     const res = await fetch(`${API_BASE}/api/crawl-suppliers`, {
       method: "POST",
       headers: authHeaders(),
-      body: JSON.stringify({ pageNo, categoryId }),
+      body: JSON.stringify({ pageNo, categoryId, queryType }),
     });
 
     if (!res.ok) {
@@ -58,76 +63,86 @@ const SupplierCrawler = ({ onComplete }: SupplierCrawlerProps) => {
 
     const data = await res.json();
     const suppliers = data.suppliers || [];
+    const saved = data.saved || 0;
 
     if (suppliers.length === 0) {
-      addLog({ page: pageNo, status: "empty", count: 0, message: "Nenhum supplier encontrado" });
-      return 0;
+      addLog({ page: pageNo, status: "empty", count: 0, saved: 0, message: data.message || "Nenhum supplier encontrado" });
+      return { extracted: 0, saved: 0 };
     }
 
-    // Insert into Supabase
-    if (isSupabaseConfigured) {
-      const rows = suppliers.map((s: any) => ({
-        company_name: s.company_name,
-        description: s.description || "",
-        products: s.products || [],
-        segment: s.segment || "",
-        images: s.images || [],
-        website_url: s.website_url || "",
-        source_url: s.source_url || "",
-        booth: s.booth || "",
-        raw_content: s,
-      }));
+    if (data.dbError) {
+      addLog({
+        page: pageNo,
+        status: "ok",
+        count: suppliers.length,
+        saved: 0,
+        message: `${suppliers.length} extraídos, erro ao salvar: ${data.dbError}`,
+      });
+    } else {
+      addLog({
+        page: pageNo,
+        status: "ok",
+        count: suppliers.length,
+        saved,
+        message: `${suppliers.length} extraídos, ${saved} salvos no banco`,
+      });
+    }
 
-      const { error } = await supabase.from("suppliers").insert(rows);
-      if (error) {
-        console.error("Supabase insert error:", error);
-        throw new Error(`Erro ao salvar no banco: ${error.message}`);
+    return { extracted: suppliers.length, saved };
+  };
+
+  const crawlPageWithRetry = async (pageNo: number): Promise<{ extracted: number; saved: number }> => {
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        return await crawlPage(pageNo);
+      } catch (err: any) {
+        if (attempt < MAX_RETRIES) {
+          addLog({
+            page: pageNo,
+            status: "retry",
+            count: 0,
+            saved: 0,
+            message: `Tentativa ${attempt + 1} falhou: ${err.message}. Retentando em ${RETRY_DELAY / 1000}s...`,
+          });
+          await new Promise((r) => setTimeout(r, RETRY_DELAY));
+        } else {
+          addLog({ page: pageNo, status: "error", count: 0, saved: 0, message: `Falhou após ${MAX_RETRIES + 1} tentativas: ${err.message}` });
+          return { extracted: 0, saved: 0 };
+        }
       }
     }
-
-    addLog({
-      page: pageNo,
-      status: "ok",
-      count: suppliers.length,
-      message: `${suppliers.length} suppliers extraídos`,
-    });
-
-    return suppliers.length;
+    return { extracted: 0, saved: 0 };
   };
 
   const startCrawl = async () => {
     if (!API_BASE) {
-      toast({
-        title: "Erro",
-        description: "VITE_API_BASE_URL não configurada.",
-        variant: "destructive",
-      });
+      toast({ title: "Erro", description: "VITE_API_BASE_URL não configurada.", variant: "destructive" });
       return;
     }
 
     setIsRunning(true);
     setLogs([]);
     setTotalExtracted(0);
+    setTotalSaved(0);
     setCurrentPage(startPage);
     abortRef.current = false;
 
-    let total = 0;
+    let extracted = 0;
+    let saved = 0;
 
     for (let page = startPage; page <= endPage; page++) {
       if (abortRef.current) {
-        addLog({ page, status: "error", count: 0, message: "Crawling cancelado pelo usuário" });
+        addLog({ page, status: "error", count: 0, saved: 0, message: "Crawling cancelado pelo usuário" });
         break;
       }
 
       setCurrentPage(page);
 
-      try {
-        const count = await crawlPage(page);
-        total += count;
-        setTotalExtracted(total);
-      } catch (err: any) {
-        addLog({ page, status: "error", count: 0, message: err.message });
-      }
+      const result = await crawlPageWithRetry(page);
+      extracted += result.extracted;
+      saved += result.saved;
+      setTotalExtracted(extracted);
+      setTotalSaved(saved);
 
       // Rate limiting delay
       if (page < endPage && !abortRef.current) {
@@ -138,7 +153,7 @@ const SupplierCrawler = ({ onComplete }: SupplierCrawlerProps) => {
     setIsRunning(false);
     toast({
       title: "Crawling finalizado",
-      description: `${total} suppliers extraídos de ${endPage - startPage + 1} páginas.`,
+      description: `${extracted} extraídos, ${saved} salvos de ${endPage - startPage + 1} páginas.`,
     });
     onComplete?.();
   };
@@ -157,12 +172,23 @@ const SupplierCrawler = ({ onComplete }: SupplierCrawlerProps) => {
         <CardTitle className="text-base">Crawler de Suppliers</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-4 gap-3">
           <div>
             <Label className="text-xs">Category ID</Label>
             <Input
               value={categoryId}
               onChange={(e) => setCategoryId(e.target.value)}
+              disabled={isRunning}
+              className="text-xs"
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Query Type</Label>
+            <Input
+              type="number"
+              min={1}
+              value={queryType}
+              onChange={(e) => setQueryType(Number(e.target.value))}
               disabled={isRunning}
               className="text-xs"
             />
@@ -212,7 +238,7 @@ const SupplierCrawler = ({ onComplete }: SupplierCrawlerProps) => {
           )}
 
           <span className="ml-auto text-xs font-medium text-muted-foreground">
-            {totalExtracted} suppliers extraídos
+            {totalExtracted} extraídos · {totalSaved} salvos
           </span>
         </div>
 
@@ -229,6 +255,8 @@ const SupplierCrawler = ({ onComplete }: SupplierCrawlerProps) => {
                       ? "text-green-600"
                       : log.status === "error"
                       ? "text-destructive"
+                      : log.status === "retry"
+                      ? "text-yellow-600"
                       : "text-muted-foreground"
                   }`}
                 >

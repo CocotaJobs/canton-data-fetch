@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import { createClient } from "@supabase/supabase-js";
 
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 
@@ -14,6 +15,44 @@ function validateApiKey(req: VercelRequest): boolean {
   const serverKey = process.env.APP_API_KEY;
   if (!serverKey) return true;
   return clientKey === serverKey;
+}
+
+function repairJson(raw: string): unknown {
+  // Try direct parse first
+  try {
+    return JSON.parse(raw);
+  } catch {
+    // Strip markdown fences
+    let cleaned = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+
+    // Find JSON boundaries
+    const start = cleaned.search(/[\{\[]/);
+    const lastBrace = cleaned.lastIndexOf("}");
+    const lastBracket = cleaned.lastIndexOf("]");
+    const end = Math.max(lastBrace, lastBracket);
+
+    if (start === -1 || end === -1) throw new Error("No JSON found in response");
+
+    cleaned = cleaned.substring(start, end + 1);
+
+    try {
+      return JSON.parse(cleaned);
+    } catch {
+      // Fix trailing commas
+      cleaned = cleaned
+        .replace(/,\s*}/g, "}")
+        .replace(/,\s*]/g, "]")
+        .replace(/[\x00-\x1F\x7F]/g, "");
+      return JSON.parse(cleaned);
+    }
+  }
+}
+
+function getSupabaseClient() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key);
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -36,17 +75,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: "OPENAI_API_KEY não configurada." });
   }
 
+  const supabase = getSupabaseClient();
+
   try {
-    const { pageNo, categoryId, baseUrl } = req.body;
+    const { pageNo, categoryId, queryType } = req.body;
 
     if (!pageNo || !categoryId) {
       return res.status(400).json({ error: "pageNo e categoryId são obrigatórios." });
     }
 
-    // Build the Canton Fair URL for this page
-    const url =
-      baseUrl ||
-      `https://365.cantonfair.org.cn/zh-CN/search?queryType=2&fCategoryId=${categoryId}&categoryId=${categoryId}&pageNo=${pageNo}`;
+    const qt = queryType || 1;
+    const url = `https://365.cantonfair.org.cn/zh-CN/search?queryType=${qt}&fCategoryId=${categoryId}&categoryId=${categoryId}&pageNo=${pageNo}`;
 
     console.log(`Scraping page ${pageNo}: ${url}`);
 
@@ -78,6 +117,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!markdown || markdown.length < 100) {
       return res.status(200).json({
         suppliers: [],
+        saved: 0,
         pageNo,
         message: "Página sem conteúdo suficiente para extração.",
       });
@@ -116,36 +156,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     items: {
                       type: "object",
                       properties: {
-                        company_name: {
-                          type: "string",
-                          description: "Nome da empresa (manter original)",
-                        },
-                        description: {
-                          type: "string",
-                          description: "Descrição da empresa/produtos em português",
-                        },
-                        products: {
-                          type: "array",
-                          items: { type: "string" },
-                          description: "Lista de produtos em português",
-                        },
-                        segment: {
-                          type: "string",
-                          description: "Segmento/categoria em português",
-                        },
-                        images: {
-                          type: "array",
-                          items: { type: "string" },
-                          description: "URLs de imagens do supplier",
-                        },
-                        website_url: {
-                          type: "string",
-                          description: "URL do site da empresa, se disponível",
-                        },
-                        booth: {
-                          type: "string",
-                          description: "Número do estande/booth",
-                        },
+                        company_name: { type: "string", description: "Nome da empresa (manter original)" },
+                        description: { type: "string", description: "Descrição em português" },
+                        products: { type: "array", items: { type: "string" }, description: "Produtos em português" },
+                        segment: { type: "string", description: "Segmento em português" },
+                        images: { type: "array", items: { type: "string" }, description: "URLs de imagens" },
+                        website_url: { type: "string", description: "URL do site" },
+                        booth: { type: "string", description: "Número do estande" },
                       },
                       required: ["company_name", "description", "products", "segment"],
                       additionalProperties: false,
@@ -174,20 +191,49 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: "Sem tool call na resposta da IA." });
     }
 
-    const result = JSON.parse(toolCall.function.arguments);
+    // Robust JSON parsing
+    let result: any;
+    try {
+      result = repairJson(toolCall.function.arguments);
+    } catch (jsonErr: any) {
+      console.error("JSON parse error:", jsonErr.message, "Raw:", toolCall.function.arguments.slice(0, 500));
+      return res.status(500).json({ error: `Erro ao parsear resposta da IA: ${jsonErr.message}` });
+    }
 
-    // Attach source_url to each supplier
     const suppliers = (result.suppliers || []).map((s: any) => ({
-      ...s,
-      source_url: url,
+      company_name: s.company_name,
+      description: s.description || "",
+      products: s.products || [],
+      segment: s.segment || "",
       images: s.images || [],
       website_url: s.website_url || "",
+      source_url: url,
       booth: s.booth || "",
+      raw_content: s,
     }));
 
-    console.log(`Page ${pageNo}: extracted ${suppliers.length} suppliers`);
+    // Step 3: Save to Supabase server-side
+    let saved = 0;
+    if (supabase && suppliers.length > 0) {
+      const { error, count } = await supabase.from("suppliers").insert(suppliers).select("id");
+      if (error) {
+        console.error("Supabase insert error:", error);
+        return res.status(200).json({
+          suppliers,
+          saved: 0,
+          pageNo,
+          dbError: error.message,
+          message: `${suppliers.length} extraídos mas erro ao salvar: ${error.message}`,
+        });
+      }
+      saved = suppliers.length;
+    } else if (!supabase) {
+      console.warn("Supabase not configured server-side — data not saved.");
+    }
 
-    return res.status(200).json({ suppliers, pageNo });
+    console.log(`Page ${pageNo}: extracted ${suppliers.length}, saved ${saved}`);
+
+    return res.status(200).json({ suppliers, saved, pageNo });
   } catch (error: any) {
     console.error("Crawl error:", error);
     return res.status(500).json({ error: error.message || "Erro no crawling" });
