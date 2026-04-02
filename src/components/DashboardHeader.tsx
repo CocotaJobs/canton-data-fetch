@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Database, Globe, Sparkles, LayoutDashboard } from "lucide-react";
+import { Database, Globe, Sparkles, LayoutDashboard, Factory } from "lucide-react";
 import { NavLink } from "./NavLink";
 
 const DashboardHeader = () => {
