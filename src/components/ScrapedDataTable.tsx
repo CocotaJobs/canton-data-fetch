@@ -136,7 +136,7 @@ const ScrapedDataTable = ({ pages, onRemove, onClearAll }: Props) => {
           <DialogHeader>
             <DialogTitle className="text-sm">{viewFull?.title || viewFull?.url}</DialogTitle>
           </DialogHeader>
-          <ScrollArea className="max-h-[60vh]">
+          <ScrollArea key={viewFull?.id || "empty"} className="max-h-[60vh]">
             <div className="prose prose-sm dark:prose-invert max-w-none p-4">
               <ReactMarkdown>{viewFull?.markdown || ""}</ReactMarkdown>
             </div>

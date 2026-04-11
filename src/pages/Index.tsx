@@ -12,6 +12,10 @@ import { getConfigStatus } from "@/lib/env-check";
 
 const configStatus = getConfigStatus();
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "Unknown scraping error";
+}
+
 const Index = () => {
   const { pages, addPage, updatePage, removePage, clearAll, stats } = useScrapedData();
   const { toast } = useToast();
@@ -39,19 +43,21 @@ const Index = () => {
       const result = await scrapeWebsite(formattedUrl);
       updatePage(id, {
         title: result.title || formattedUrl,
+        description: result.description || "",
         markdown: result.markdown,
         status: "completed",
         scrapedAt: new Date().toISOString(),
       });
       toast({ title: "Scraping completed", description: result.title || formattedUrl });
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorMessage = getErrorMessage(err);
       updatePage(id, {
         status: "failed",
-        error: err.message,
+        error: errorMessage,
       });
       toast({
         title: "Scraping failed",
-        description: err.message,
+        description: errorMessage,
         variant: "destructive",
       });
     }
@@ -68,21 +74,37 @@ const Index = () => {
         <DashboardHeader />
         <main className="mx-auto max-w-7xl space-y-5 px-6 py-6">
           {!configStatus.allConfigured && (
-            <Alert variant="destructive" className="border-yellow-500/50 bg-yellow-500/10 text-yellow-200 [&>svg]:text-yellow-400">
+            <Alert
+              className="border-amber-300/80 bg-amber-50/95 text-amber-950 shadow-sm backdrop-blur-sm [&>svg]:text-amber-700"
+            >
               <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>Configuração incompleta</AlertTitle>
-              <AlertDescription className="space-y-1">
+              <AlertTitle className="text-amber-900">Configuração incompleta</AlertTitle>
+              <AlertDescription className="space-y-2 text-amber-800">
                 {!configStatus.supabase.configured && (
                   <p>
                     <strong>Banco de dados:</strong> configure{" "}
-                    {configStatus.supabase.missing.map((v) => <code key={v} className="rounded bg-yellow-500/20 px-1 text-xs">{v}</code>).reduce((a, b) => <>{a}, {b}</>)}{" "}
+                    {configStatus.supabase.missing.map((v) => (
+                      <code
+                        key={v}
+                        className="rounded-md border border-amber-300/80 bg-amber-200/70 px-1.5 py-0.5 text-xs font-semibold text-amber-950"
+                      >
+                        {v}
+                      </code>
+                    )).reduce((a, b) => <>{a}, {b}</>)}{" "}
                     nas env vars da Vercel.
                   </p>
                 )}
                 {!configStatus.api.configured && (
                   <p>
                     <strong>API Backend:</strong> configure{" "}
-                    {configStatus.api.missing.map((v) => <code key={v} className="rounded bg-yellow-500/20 px-1 text-xs">{v}</code>).reduce((a, b) => <>{a}, {b}</>)}{" "}
+                    {configStatus.api.missing.map((v) => (
+                      <code
+                        key={v}
+                        className="rounded-md border border-amber-300/80 bg-amber-200/70 px-1.5 py-0.5 text-xs font-semibold text-amber-950"
+                      >
+                        {v}
+                      </code>
+                    )).reduce((a, b) => <>{a}, {b}</>)}{" "}
                     nas env vars da Vercel.
                   </p>
                 )}

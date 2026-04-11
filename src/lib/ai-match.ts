@@ -74,7 +74,9 @@ function wrapNetworkError(err: unknown): never {
   throw err;
 }
 
-export async function scrapeWebsite(url: string): Promise<{ markdown: string; title: string }> {
+export async function scrapeWebsite(
+  url: string,
+): Promise<{ description?: string; markdown: string; title: string }> {
   assertApiBase();
   try {
     const res = await fetch(apiUrl("scrape-website"), {
@@ -195,7 +197,9 @@ export async function* streamChat(
           const parsed = JSON.parse(data);
           const content = parsed.choices?.[0]?.delta?.content;
           if (content) yield content;
-        } catch {}
+        } catch {
+          continue;
+        }
       }
     }
   }

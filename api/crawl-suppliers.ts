@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { createClient } from "@supabase/supabase-js";
-import { buildCantonFairPageUrl } from "../src/lib/canton-fair";
+import { buildCantonFairPageUrl } from "../src/lib/canton-fair.ts";
 
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 
